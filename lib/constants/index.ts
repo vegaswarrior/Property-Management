@@ -8,10 +8,10 @@ export const LATEST_PRODUCTS_LIMIT =
 
 
 export const NEXTAUTH_URL = process.env.NEXT_PUBLIC_NEXTAUTH_URL || 'https://www.rockenmyvibe.com';
-export const signInDefaultValues = {
-  email: 'allenyoung1979@yahoo.com',
-  password: 'NewLove2044$&@*',
-};
+// export const signInDefaultValues = {
+//   email: 'allenyoung1979@yahoo.com',
+//   password: 'NewLove2044$&@*',
+// };
 
 export const signUpDefaultValues = {
   name: '',
