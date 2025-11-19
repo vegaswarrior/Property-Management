@@ -13,7 +13,13 @@ import Link from 'next/link';
 import Search from './search';
 
 const CategoryDrawer = async () => {
-  const categories = await getAllCategories();
+  let categories: Awaited<ReturnType<typeof getAllCategories>> = [];
+  
+  try {
+    categories = await getAllCategories();
+  } catch (error) {
+    console.error('Failed to fetch categories:', error);
+  }
 
   return (
     <Drawer direction='left'>
@@ -27,21 +33,25 @@ const CategoryDrawer = async () => {
         <DrawerHeader>
           <DrawerTitle>Select a category</DrawerTitle>
           <div className='space-y-1 mt-4'>
-            {categories.map((x) => (
-              <Button
-                variant='ghost'
-                className='w-full justify-start'
-                key={x.category}
-                asChild
-              >
-                
-                <DrawerClose asChild>
-                  <Link href={`/search?category=${x.category}`}>
-                    {x.category} ({x._count})
-                  </Link>
-                </DrawerClose>
-              </Button>
-            ))}
+            {categories.length > 0 ? (
+              categories.map((x) => (
+                <Button
+                  variant='ghost'
+                  className='w-full justify-start'
+                  key={x.category}
+                  asChild
+                >
+                  
+                  <DrawerClose asChild>
+                    <Link href={`/search?category=${x.category}`}>
+                      {x.category} ({x._count})
+                    </Link>
+                  </DrawerClose>
+                </Button>
+              ))
+            ) : (
+              <p className='text-sm text-gray-500'>Categories will load shortly...</p>
+            )}
           </div>
         </DrawerHeader>
         <Search />

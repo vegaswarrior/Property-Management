@@ -227,6 +227,8 @@ export async function updateOrderToPaid({
         shippingAddress: updatedOrder.shippingAddress,
         paymentResult: updatedOrder.paymentResult,
       },
+    }).catch((error) => {
+      console.error('Failed to send purchase receipt:', error);
     });
   } else {
     console.error('Invalid address or payment result:', updatedOrder);

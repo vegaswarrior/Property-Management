@@ -12,7 +12,6 @@ const Homepage = async () => {
 
   return (
     <>
-
       <Hero />
       <ProductList data={latestProducts} title='Newest Arrivals' limit={4} />
       <ViewAllProductsButton />

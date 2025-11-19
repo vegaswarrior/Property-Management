@@ -40,6 +40,8 @@ export async function sendVerificationEmailToken(email: string) {
     await sendVerificationEmail({
       email,
       verificationLink,
+    }).catch((error) => {
+      console.error('Failed to send verification email:', error);
     });
 
     return {
@@ -109,6 +111,8 @@ export async function requestPasswordReset(email: string) {
     await sendPasswordResetEmail({
       email,
       resetLink,
+    }).catch((error) => {
+      console.error('Failed to send password reset email:', error);
     });
 
     return {
