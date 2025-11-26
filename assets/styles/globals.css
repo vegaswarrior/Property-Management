@@ -146,5 +146,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  input,
+  textarea,
+  select {
+    @apply bg-background text-foreground placeholder:text-muted-foreground;
+  }
 }
 

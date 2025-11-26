@@ -24,8 +24,9 @@ export default function RootLayout({
       <body className='bg-gradient-to-br from-slate-950 via-violet-800/60 to-slate-900 text-foreground flex flex-col min-h-screen overflow-x-hidden'>
         <ThemeProvider
           attribute='class'
-          defaultTheme='light'
-          enableSystem
+          defaultTheme='dark'
+          enableSystem={false}
+          forcedTheme='dark'
           disableTransitionOnChange
         >
           {children}
