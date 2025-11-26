@@ -3,7 +3,7 @@ import { getLatestProducts} from '@/lib/actions/product.actions';
 import {  getFeaturedProducts} from '@/lib/actions/product.actions';
 import ProductCarousel from '@/components/shared/product/product-carousel';
 import ViewAllProductsButton from '@/components/view-all-products-button';
-// import DealCountdown from '@/components/deal-countdown';
+import DealCountdown from '@/components/deal-countdown';
 import Hero from '@/components/hero/hero';
 
 const Homepage = async () => {
@@ -15,11 +15,12 @@ const Homepage = async () => {
       <Hero />
       <ProductList data={latestProducts} title='Newest Arrivals' limit={4} />
       <ViewAllProductsButton />
-      {/* <DealCountdown /> */}
+      
         {featuredProducts.length > 0 && (
         <ProductCarousel data={featuredProducts}
          />
       )}
+      <DealCountdown />
     </>
   );
 };
