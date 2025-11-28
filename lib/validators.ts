@@ -200,3 +200,20 @@ export const insertReviewSchema = z.object({
     .min(1, 'Rating must be at least 1')
     .max(5, 'Rating must be at most 5'),
 });
+
+// Blog post schemas
+export const insertBlogPostSchema = z.object({
+  title: z.string().min(3, 'Title must be at least 3 characters'),
+  slug: z.string().min(3, 'Slug must be at least 3 characters'),
+  excerpt: z.string().min(3, 'Excerpt must be at least 3 characters').optional().nullable(),
+  contentHtml: z.string().min(3, 'Content must be at least 3 characters'),
+  coverImage: z.string().url('Cover image must be a valid URL').optional().nullable(),
+  mediaUrls: z.array(z.string().url()).default([]),
+  tags: z.array(z.string()).default([]),
+  isPublished: z.boolean().default(true),
+  authorId: z.string().optional().nullable(),
+});
+
+export const updateBlogPostSchema = insertBlogPostSchema.extend({
+  id: z.string().min(1, 'Id is required'),
+});
