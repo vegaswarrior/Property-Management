@@ -19,9 +19,9 @@ type VariantInput = {
 };
 
 // Get latest products
-export async function getLatestProducts() {
+export async function getLatestProducts(limit = LATEST_PRODUCTS_LIMIT) {
   const data = await prisma.product.findMany({
-    take: LATEST_PRODUCTS_LIMIT,
+    take: limit,
     orderBy: { createdAt: 'desc' },
   });
 

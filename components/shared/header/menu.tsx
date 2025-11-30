@@ -14,11 +14,17 @@ const Menu = async () => {
   const cartItemCount = cart?.items?.reduce((sum, item) => sum + item.qty, 0) || 0;
   const session = await auth();
   const isAdmin = session?.user?.role === 'admin';
+  const isSuperAdmin = session?.user?.role === 'superAdmin';
   return (
     <div className='flex justify-end gap-3'>
       <nav className='hidden md:flex w-full max-w-xs gap-1'>
         <ModeToggle />
         <NotificationBell isAdmin={isAdmin} />
+        {isSuperAdmin && (
+          <Button asChild variant='ghost'>
+            <Link href='/super-admin'>Monitoring</Link>
+          </Button>
+        )}
         <Button asChild variant='ghost' className='relative'>
           <Link href='/cart' className='relative flex items-center gap-1'>
             <div className='relative'>
@@ -43,6 +49,11 @@ const Menu = async () => {
             <SheetTitle></SheetTitle>
             <ModeToggle />
             <NotificationBell isAdmin={isAdmin} />
+            {isSuperAdmin && (
+              <Button asChild variant='ghost' className='w-full justify-start'>
+                <Link href='/super-admin'>Monitoring</Link>
+              </Button>
+            )}
             <Button asChild variant='ghost' className='w-full justify-start relative'>
               <Link href='/cart' className='relative flex items-center gap-1'>
                 <div className='relative'>

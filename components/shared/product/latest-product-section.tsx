@@ -17,7 +17,7 @@ interface LatestProductSectionProps {
 const LatestProductSection = async ({
   title = 'Faith Based',
   category,
-  limit = 4,
+  limit = 10,
 }: LatestProductSectionProps) => {
   const products = category
     ? await getLatestProductsByCategory(category, limit)

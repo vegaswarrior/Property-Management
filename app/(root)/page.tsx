@@ -20,27 +20,28 @@ const Homepage = async () => {
   return (
     <>
       <Hero />
-      <ProductList data={latestProducts} title='Newest Arrivals' limit={4} />
-      <ViewAllProductsButton />
+      <ProductList data={latestProducts} title='Newest Arrivals'  />
+      
       
       {featuredProducts.length > 0 && (
         <ProductCarousel data={featuredProducts} />
       )}
 
       {faithBasedProducts.length > 0 && (
-        <ProductList data={faithBasedProducts} title='Faith Based' limit={4} />
+        <ProductList data={faithBasedProducts} title='Faith Based'  />
       )}
+      <ViewAllProductsButton />
 
       {funnyProducts.length > 0 && (
-        <ProductList data={funnyProducts} title='Funny' limit={4} />
+        <ProductList data={funnyProducts} title='Funny'  />
       )}
 
       {dealsProducts.length > 0 && (
-        <ProductList data={dealsProducts} title="Deals" limit={4} />
+        <ProductList data={dealsProducts} title="Deals" />
       )}
 
       {christmasProducts.length > 0 && (
-        <ProductList data={christmasProducts} title='Christmas' limit={4} />
+        <ProductList data={christmasProducts} title='Christmas' />
       )}
       <DealCountdown />
       <CustomerReviews />

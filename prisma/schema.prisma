@@ -439,3 +439,17 @@ model BlogReaction {
   @@index([postId])
 }
 
+model AnalyticsEvent {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionCartId String
+  userId        String?  @db.Uuid
+  path          String
+  referrer      String?
+  country       String?
+  userAgent     String?
+  createdAt     DateTime @default(now()) @db.Timestamp(6)
+  @@index([sessionCartId])
+  @@index([userId])
+  @@index([path])
+  @@index([createdAt])
+}

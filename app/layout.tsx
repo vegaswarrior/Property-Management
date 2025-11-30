@@ -4,6 +4,7 @@ import { APP_DESCRIPTION, APP_NAME, SERVER_URL } from '@/lib/constants';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/toaster';
 import { ChatWidget } from '@/components/shared/chat-widget';
+import PageViewTracker from '@/components/analytics/page-view-tracker';
 
 export const metadata: Metadata = {
   title: {
@@ -29,6 +30,7 @@ export default function RootLayout({
           forcedTheme='dark'
           disableTransitionOnChange
         >
+          <PageViewTracker />
           {children}
           <Toaster />
           <ChatWidget />
@@ -37,6 +39,4 @@ export default function RootLayout({
     </html>
   );
 }
-
-
 
