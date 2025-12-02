@@ -9,12 +9,15 @@ const currency = z
     'Price must have exactly two decimal places'
   );
 
-// Schema for inserting products
-export const insertProductSchema = z.object({
+// Base schema for products (shared by insert and update)
+const baseProductSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
   slug: z.string().min(3, 'Slug must be at least 3 characters'),
   category: z.string().min(3, 'Category must be at least 3 characters'),
-  subCategory: z.string().min(3, 'Sub category must be at least 3 characters').optional(),
+  subCategory: z
+    .string()
+    .min(3, 'Sub category must be at least 3 characters')
+    .optional(),
   brand: z.string().min(3, 'Brand must be at least 3 characters'),
   description: z.string().min(3, 'Description must be at least 3 characters'),
   stock: z.coerce.number(),
@@ -30,10 +33,35 @@ export const insertProductSchema = z.object({
   saleUntil: z.string().datetime().nullable().optional(),
 });
 
-// Schema for updating products
-export const updateProductSchema = insertProductSchema.extend({
-  id: z.string().min(1, 'Id is required'),
+// Schema for inserting products
+export const insertProductSchema = baseProductSchema.superRefine((data, ctx) => {
+  if (data.onSale) {
+    if (data.salePercent === undefined || Number.isNaN(data.salePercent)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['salePercent'],
+        message: 'Sale percent is required when On Sale is enabled',
+      });
+    }
+  }
 });
+
+// Schema for updating products
+export const updateProductSchema = baseProductSchema
+  .extend({
+    id: z.string().min(1, 'Id is required'),
+  })
+  .superRefine((data, ctx) => {
+    if (data.onSale) {
+      if (data.salePercent === undefined || Number.isNaN(data.salePercent)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['salePercent'],
+          message: 'Sale percent is required when On Sale is enabled',
+        });
+      }
+    }
+  });
 
 // Schema for signing users in
 export const signInFormSchema = z.object({

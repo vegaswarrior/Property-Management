@@ -68,6 +68,15 @@ const ProductForm = ({
   const banner = form.watch('banner');
   const [sizes, setSizes] = useState<{ id: string; name: string; slug: string }[]>([]);
 
+  const handleOnSaleChange = (v: boolean | 'indeterminate') => {
+    const checked = Boolean(v);
+    form.setValue('onSale', checked);
+    if (!checked) {
+      form.setValue('salePercent', undefined);
+      form.setValue('saleUntil', null);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -335,7 +344,7 @@ const ProductForm = ({
           <div className="flex items-center gap-2 text-xs">
             <Checkbox
               checked={form.watch('onSale')}
-              onCheckedChange={(v) => form.setValue('onSale', Boolean(v))}
+              onCheckedChange={handleOnSaleChange}
             />
             <span>On Sale</span>
           </div>

@@ -7,6 +7,7 @@ import { convertToPlainObject } from '@/lib/utils';
 import SuperAdminDashboard from './super-admin-dashboard';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Super Admin',
