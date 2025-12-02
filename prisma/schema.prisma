@@ -455,3 +455,10 @@ model AnalyticsEvent {
   @@index([path])
   @@index([createdAt])
 }
+
+model SupportStatus {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  isOnline  Boolean  @default(true)
+  updatedBy String?  @db.Uuid
+  updatedAt DateTime @default(now()) @db.Timestamp(6)
+}

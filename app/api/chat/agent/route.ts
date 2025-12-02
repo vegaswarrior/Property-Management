@@ -11,6 +11,11 @@ const AGENT_RESPONSES: Record<string, string[]> = {
     "Let me look up your order details for you.",
     "What specific information do you need about your order?",
   ],
+  tracking: [
+    "I can help you track your order. Please share your order number and I'll check the status.",
+    "Your tracking number is usually in your order confirmation email. If you paste it here, I can check where your package is.",
+    "Once I have your order number, I can tell you exactly where your package is and when it's due to arrive.",
+  ],
   shipping: [
     "Our standard shipping takes 5-7 business days. We also offer expedited shipping options.",
     "You can track your shipment using the tracking number sent to your email.",
@@ -31,8 +36,18 @@ const AGENT_RESPONSES: Record<string, string[]> = {
     "We offer exchanges for different sizes at no extra cost.",
     "What size are you looking for?",
   ],
+  color: [
+    "No worries if the color isn't what you expected. Tell me your order number and the color you wanted instead.",
+    "We can usually exchange for a different color. Which item and color did you receive vs. what you wanted?",
+    "If the item arrived in the wrong color, we'll make it right. Please share your order number and a quick description.",
+  ],
+  address: [
+    "If your shipping address changed, please send your order number and the full new address so I can check if we can update it.",
+    "If the order hasn't shipped yet, we can often update the address. Share your new name, street, city, postal code, and country.",
+    "If your package is already in transit, I can still check options with the carrier once I have your order number.",
+  ],
   payment: [
-    "We accept multiple payment methods including credit cards, PayPal, and more.",
+    "We accept multiple payment methods including credit cards, PayPal, and popular wallets like Apple Pay, Google Pay, and Cash App (where available).",
     "Your payment is secure and encrypted.",
     "Is there a payment issue I can help you with?",
   ],

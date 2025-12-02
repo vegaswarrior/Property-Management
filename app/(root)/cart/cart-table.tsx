@@ -82,7 +82,7 @@ function RemoveButton({ item }: { item: CartItem }) {
   );
 }
 
-const CartTable = ({ cart, hasShippingAddress }: { cart?: Cart; hasShippingAddress?: boolean }) => {
+const CartTable = ({ cart }: { cart?: Cart }) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -163,7 +163,7 @@ const CartTable = ({ cart, hasShippingAddress }: { cart?: Cart; hasShippingAddre
                 disabled={isPending}
                 onClick={() =>
                   startTransition(() =>
-                    router.push(hasShippingAddress ? '/place-order' : '/shipping-address')
+                    router.push('/checkout')
                   )
                 }
               >

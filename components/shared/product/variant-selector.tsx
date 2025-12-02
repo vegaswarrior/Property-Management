@@ -1,9 +1,15 @@
-'use client';
+"use client";
 import React, { useMemo, useState, useEffect } from 'react';
 import { Decimal } from '@prisma/client/runtime/library';
+import { useRouter } from 'next/navigation';
+import { useTransition } from 'react';
+import { Loader } from 'lucide-react';
 import AddToCart from './add-to-cart';
 import { Cart, CartItem } from '@/types';
 import ProductPrice from '@/components/shared/product/product-price';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { addItemToCart } from '@/lib/actions/cart.actions';
 
 export type Variant = {
   id: string;
@@ -142,6 +148,10 @@ export default function VariantSelector({
   const shouldShowButton = hasRequiredSelections();
   const shouldShowMessage = !hasRequiredSelections();
 
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isBuying, startBuying] = useTransition();
+
   useEffect(() => {
     if (onColorSelected && selectedColor) {
       const colorName = effectiveColors.find(c => c.slug === selectedColor)?.name;
@@ -227,8 +237,42 @@ export default function VariantSelector({
       </div>
 
       {shouldShowButton ? (
-        <div>
+        <div className='flex flex-col gap-2'>
           <AddToCart cart={cart} item={item} />
+          <Button
+            type='button'
+            className='w-full'
+            disabled={isBuying}
+            onClick={() => {
+              if (!hasRequiredSelections()) {
+                toast({
+                  variant: 'destructive',
+                  description: 'Please select required options before buying now.',
+                });
+                return;
+              }
+
+              startBuying(async () => {
+                const res = await addItemToCart(item);
+
+                if (!res.success) {
+                  toast({
+                    variant: 'destructive',
+                    description: res.message,
+                  });
+                  return;
+                }
+
+                router.push('/checkout');
+              });
+            }}
+          >
+            {isBuying ? (
+              <Loader className='w-4 h-4 animate-spin' />
+            ) : (
+              'Buy Now'
+            )}
+          </Button>
         </div>
       ) : shouldShowMessage ? (
         <p className='text-sm text-gray-500'>Please select color and size</p>

@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { getOrderById } from '@/lib/actions/order-actions';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import OrderDetailsTable from './order-details-table';
 import { ShippingAddress } from '@/types';
 import { auth } from '@/auth';
@@ -20,10 +20,6 @@ const OrderDetailsPage = async (props: {
 
   const session = await auth();
 
-  if (order.userId !== session?.user.id && session?.user.role !== 'admin') {
-    return redirect('/unauthorized');
-  }
-
   let client_secret = null;
 
   if (order.paymentMethod === 'Stripe' && !order.isPaid) {
@@ -33,6 +29,7 @@ const OrderDetailsPage = async (props: {
       amount: Math.round(Number(order.totalPrice) * 100),
       currency: 'USD',
       metadata: { orderId: order.id },
+      automatic_payment_methods: { enabled: true },
     });
 
     client_secret = paymentIntent.client_secret;

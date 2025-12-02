@@ -65,7 +65,7 @@ const StripePayment = ({
 
     return (
       <form className='space-y-4' onSubmit={handleSubmit}>
-        <div className='text-xl'>Stripe Checkout</div>
+        <div className='text-xl'>Pay with Card or Wallet (via Stripe)</div>
         {errorMessage && <div className='text-destructive'>{errorMessage}</div>}
         <PaymentElement />
         <div>

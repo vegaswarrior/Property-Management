@@ -9,10 +9,15 @@ interface ChatRequest {
 const SIMULATED_RESPONSES: Record<string, string> = {
   hello: "Hello! How can I help you today?",
   hi: "Hi there! What can I assist you with?",
-  help: "I'm here to help! You can ask me about our products, orders, shipping, returns, and more.",
+  help: "I'm here to help! You can ask me about your orders, tracking, shipping, returns, exchanges, and more.",
   price: "I can help you with pricing information. What product would you like to know about?",
   shipping: "We offer fast and reliable shipping options. How can I help with your shipping inquiry?",
-  return: "We have a hassle-free return policy. What would you like to know?",
+  tracking: "I can help you track your order. Please share your order number and I'll check the status.",
+  order: "I'd be happy to help with your order. Tell me your order number and what you need to change.",
+  size: "We can help with sizing or exchanges. What item and size are you looking at?",
+  color: "If you ordered the wrong color, we can usually exchange it. Tell me your order number and the color you wanted.",
+  address: "If your shipping address changed, share your order number and the full new address so I can check if we can update it.",
+  return: "We have a hassle-free return policy. Most items can be returned within 30 days if unworn and in original condition.",
   thanks: "You're welcome! Is there anything else I can help you with?",
   thank: "Happy to help! Feel free to ask if you need anything else.",
 };
@@ -30,8 +35,8 @@ function getSimulatedResponse(message: string): string {
     "That's a great question! Let me help you with that.",
     "I understand. Can you tell me more about what you need?",
     "Thanks for reaching out. How can I better assist you?",
-    "I'm here to help! Is there anything specific you'd like to know?",
-    "Thank you for your message. A live agent will be with you shortly if needed.",
+    "I'm here to help! Is there anything specific you'd like to know about your order or products?",
+    "Thank you for your message. If this needs a human to review, our team will follow up by email.",
   ];
 
   return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];

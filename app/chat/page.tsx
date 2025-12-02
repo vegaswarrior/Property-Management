@@ -1,15 +1,21 @@
 import { ChatBox } from '@/components/shared/chatbox';
+import { auth } from '@/auth';
+import SupportStatusToggle from '@/components/shared/support-status-toggle';
 
 export const metadata = {
   title: 'Support Chat | Rocken My Vibe',
   description: 'Get help from our AI assistant and live agents',
 };
 
-export default function ChatPage() {
+export default async function ChatPage() {
+  const session = await auth();
+  const isAdmin = session?.user?.role === 'admin' || session?.user?.role === 'superAdmin';
+
   return (
     <div className="w-full min-h-screen bg-white dark:bg-slate-950">
       <div className="max-w-6xl mx-auto h-screen flex flex-col md:flex-row gap-4 p-4">
-        <div className="md:w-2/3 h-full">
+        <div className="md:w-2/3 h-full flex flex-col gap-3">
+          {isAdmin && <SupportStatusToggle />}
           <ChatBox />
         </div>
         <div className="md:w-1/3 hidden md:flex flex-col bg-slate-100 dark:bg-slate-900 rounded-lg p-6 space-y-4">
