@@ -1,6 +1,5 @@
 import ProductList from '@/components/shared/product/product-list';
-import { getLatestProducts, getLatestProductsByCategory, getFeaturedProducts } from '@/lib/actions/product.actions';
-import ProductCarousel from '@/components/shared/product/product-carousel';
+import { getLatestProductsByCategory } from '@/lib/actions/product.actions';
 import ViewAllProductsButton from '@/components/view-all-products-button';
 import DealCountdown from '@/components/deal-countdown';
 import Hero from '@/components/hero/hero';
@@ -40,17 +39,12 @@ const normalizeProducts = (products: RawProduct[]): Product[] =>
   });
 
 const Homepage = async () => {
-  const latestProductsRaw = await getLatestProducts(20);
-  const featuredProductsRaw = await getFeaturedProducts();
-
   // Themed sections: make sure your products use these category names (e.g. "Faith", "Funny", "Deals", "Christmas")
-  const faithBasedProductsRaw = await getLatestProductsByCategory('Faith');
-  const funnyProductsRaw = await getLatestProductsByCategory('Funny');
-  const dealsProductsRaw = await getLatestProductsByCategory('Deals');
-  const christmasProductsRaw = await getLatestProductsByCategory('Christmas');
+  const faithBasedProductsRaw = await getLatestProductsByCategory('Faith', 20);
+  const funnyProductsRaw = await getLatestProductsByCategory('Funny', 20);
+  const dealsProductsRaw = await getLatestProductsByCategory('Deals', 20);
+  const christmasProductsRaw = await getLatestProductsByCategory('Christmas', 20);
 
-  const latestProducts = normalizeProducts(latestProductsRaw);
-  const featuredProducts = normalizeProducts(featuredProductsRaw);
   const faithBasedProducts = normalizeProducts(faithBasedProductsRaw);
   const funnyProducts = normalizeProducts(funnyProductsRaw);
   const dealsProducts = normalizeProducts(dealsProductsRaw);
@@ -60,12 +54,11 @@ const Homepage = async () => {
     <>
       <Hero />
 
-      {/* Newest + Featured (acts like best sellers) */}
-      <ProductList data={latestProducts} title='Newest Arrivals' />
+      {/* <ProductList data={latestProducts} title='Newest Arrivals' /> */}
 
-      {featuredProducts.length > 0 && (
+      {/* {featuredProducts.length > 0 && (
         <ProductCarousel data={featuredProducts} />
-      )}
+      )} */}
 
       {/* Themed collections as simple entry points */}
       {faithBasedProducts.length > 0 && (
@@ -77,7 +70,7 @@ const Homepage = async () => {
       )}
 
       {dealsProducts.length > 0 && (
-        <ProductList data={dealsProducts} title="Deals & Steals" />
+        <ProductList data={dealsProducts} title="Positive Vibes" />
       )}
 
       {christmasProducts.length > 0 && (

@@ -38,7 +38,12 @@ export async function getLatestProducts(limit = LATEST_PRODUCTS_LIMIT) {
 // Get latest products for a specific category (for themed sections like Faith, Funny, Deals, etc.)
 export async function getLatestProductsByCategory(category: string, limit = LATEST_PRODUCTS_LIMIT) {
   const data = await prisma.product.findMany({
-    where: { category },
+    where: {
+      OR: [
+        { category: { equals: category, mode: 'insensitive' } },
+        { subCategory: { equals: category, mode: 'insensitive' } },
+      ],
+    },
     take: limit,
     orderBy: { createdAt: 'desc' },
   });
