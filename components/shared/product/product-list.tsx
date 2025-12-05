@@ -62,9 +62,9 @@ const ProductList = ({
   };
 
   return (
-    <div className="relative w-full py-12">
+    <div className="relative w-full py-4">
       {title && (
-        <h2 className="text-2xl font-bold text-center mb-8">
+        <h2 className="text-2xl font-bold text-center ">
           {title}
         </h2>
       )}

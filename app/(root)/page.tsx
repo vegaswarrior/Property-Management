@@ -64,14 +64,14 @@ const Homepage = async () => {
       {faithBasedProducts.length > 0 && (
         <ProductList data={faithBasedProducts} title='Faith Based Vibes' />
       )}
+      {dealsProducts.length > 0 && (
+        <ProductList data={dealsProducts} title="Positive Vibes" />
+      )}
 
       {funnyProducts.length > 0 && (
         <ProductList data={funnyProducts} title='Funny & Bold' />
       )}
 
-      {dealsProducts.length > 0 && (
-        <ProductList data={dealsProducts} title="Positive Vibes" />
-      )}
 
       {christmasProducts.length > 0 && (
         <ProductList data={christmasProducts} title='Holiday & Christmas' />
