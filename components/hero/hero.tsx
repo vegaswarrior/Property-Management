@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 
 export default function Hero() {
   return (
-    <div className="relative w-full h-[600px] overflow-visible flex items-center justify-center bg-gradient-to-r from-sky-700 via-blue-500 to-cyan-500">
+    <div className="relative w-full h-[600px] overflow-visible flex items-center justify-center">
       <div className="w-full max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-start gap-10 h-full pt-12 pb-12 ml-4">
         <div className="flex-1 flex flex-col items-center md:items-start gap-6 mt-0">
           <motion.div
@@ -17,7 +17,7 @@ export default function Hero() {
           >
             <p className="text-xs tracking-[0.35em] uppercase text-black font-semibold">Modern Living</p>
             <motion.h1
-              className="text-5xl sm:text-6xl md:text-7xl font-semibold tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-sky-500 bg-clip-text text-transparent drop-shadow-[0_0_32px_rgba(15,23,42,0.35)]"
+              className="text-5xl sm:text-6xl md:text-7xl font-semibold tracking-tight bg-clip-text text-transparent drop-shadow-[0_0_32px_rgba(15,23,42,0.35)]"
               style={{ fontFamily: 'Helvetica Neue, system-ui' }}
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}

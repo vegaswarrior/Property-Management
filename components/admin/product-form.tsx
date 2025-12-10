@@ -88,7 +88,11 @@ const ProductForm = ({
               <FormItem className="w-full">
                 <FormLabel>Property name</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Skyview Apartments" {...field} />
+                  <Input
+                    placeholder="e.g. Skyview Apartments"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -103,7 +107,11 @@ const ProductForm = ({
                 <FormLabel>Slug</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <Input placeholder="auto-generated from property name" {...field} />
+                    <Input
+                      placeholder="auto-generated from property name"
+                      {...field}
+                      value={field.value ?? ''}
+                    />
                     <Button
                       type="button"
                       className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1 mt-2"
@@ -133,7 +141,11 @@ const ProductForm = ({
               <FormItem className="w-full">
                 <FormLabel>Bedrooms</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. 2" {...field} />
+                  <Input
+                    placeholder="e.g. 2"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -147,7 +159,11 @@ const ProductForm = ({
               <FormItem className="w-full">
                 <FormLabel>Bathrooms</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. 1.5" {...field} />
+                  <Input
+                    placeholder="e.g. 1.5"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -161,7 +177,11 @@ const ProductForm = ({
               <FormItem className="w-full">
                 <FormLabel>Square feet</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. 850" {...field} />
+                  <Input
+                    placeholder="e.g. 850"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -177,7 +197,11 @@ const ProductForm = ({
               <FormItem className="w-full md:col-span-2">
                 <FormLabel>Street address</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. 123 Main St, City, State" {...field} />
+                  <Input
+                    placeholder="e.g. 123 Main St, City, State"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -191,7 +215,11 @@ const ProductForm = ({
               <FormItem className="w-full">
                 <FormLabel>Unit / Apt</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Apt 4B" {...field} />
+                  <Input
+                    placeholder="e.g. Apt 4B"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -208,7 +236,11 @@ const ProductForm = ({
               <FormItem className="w-full">
                 <FormLabel>Property type</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Apartment, House, Office" {...field} />
+                  <Input
+                    placeholder="e.g. Apartment, House, Office"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -222,7 +254,11 @@ const ProductForm = ({
               <FormItem className="w-full">
                 <FormLabel>Neighborhood / Area</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Downtown, Riverside District" {...field} />
+                  <Input
+                    placeholder="e.g. Downtown, Riverside District"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -236,7 +272,11 @@ const ProductForm = ({
               <FormItem className="w-full">
                 <FormLabel>Ownership / Branding</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Skyline Properties" {...field} />
+                  <Input
+                    placeholder="e.g. Skyline Properties"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -253,7 +293,11 @@ const ProductForm = ({
               <FormItem className="w-full">
                 <FormLabel>Starting monthly rent</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. 1650" {...field} />
+                  <Input
+                    placeholder="e.g. 1650"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -267,7 +311,11 @@ const ProductForm = ({
               <FormItem className="w-full">
                 <FormLabel>Available units</FormLabel>
                 <FormControl>
-                  <Input placeholder="Number of available units" {...field} />
+                  <Input
+                    placeholder="Number of available units"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -380,6 +428,7 @@ const ProductForm = ({
                   placeholder="Describe the property, amenities, nearby points of interest, and any leasing details."
                   className="resize-none"
                   {...field}
+                  value={field.value ?? ''}
                 />
               </FormControl>
               <FormMessage />

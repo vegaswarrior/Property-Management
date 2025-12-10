@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Bell, BellRing, Check, CheckCheck, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,206 +11,239 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { formatDistanceToNow } from '@/lib/utils/date-utils';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
-interface NotificationData {
-  newOrders: number;
-  openMessages: number;
-  unreadMessages: number;
-  unreadEmailThreads: number;
-  pendingFriendRequests: number;
+interface Notification {
+  id: string;
+  type: 'application' | 'message' | 'maintenance' | 'payment' | 'reminder';
+  title: string;
+  message: string;
+  isRead: boolean;
+  actionUrl?: string;
+  createdAt: string;
 }
 
-type DismissedNotifications = {
-  newOrders: boolean;
-  openMessages: boolean;
-  unreadMessages: boolean;
-  unreadEmailThreads: boolean;
-  pendingFriendRequests: boolean;
-};
-
 export default function NotificationBell({ isAdmin }: { isAdmin: boolean }) {
-  const [notifications, setNotifications] = useState<NotificationData>({
-    newOrders: 0,
-    openMessages: 0,
-    unreadMessages: 0,
-    unreadEmailThreads: 0,
-    pendingFriendRequests: 0,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [dismissed, setDismissed] = useState<DismissedNotifications>({
-    newOrders: false,
-    openMessages: false,
-    unreadMessages: false,
-    unreadEmailThreads: false,
-    pendingFriendRequests: false,
-  });
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
 
-  const STORAGE_KEY = 'notificationBell:dismissed';
-
-  const persistDismissed = (next: DismissedNotifications) => {
-    if (typeof window === 'undefined') return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // ignore storage errors
-    }
-  };
-
-  const dismissNotification = (key: keyof DismissedNotifications) => {
-    setNotifications((prev) => ({
-      ...prev,
-      [key]: 0,
-    }));
-    setDismissed((prev) => {
-      const next = { ...prev, [key]: true };
-      persistDismissed(next);
-      return next;
-    });
-  };
-
+  // Fetch notifications
   const fetchNotifications = async () => {
+    if (!session?.user?.id) return;
+    
     try {
-      const response = await fetch('/api/notifications/summary');
+      const response = await fetch(`/api/notifications?userId=${session.user.id}&limit=10`);
       if (response.ok) {
-        const data: NotificationData = await response.json();
-        setNotifications(data);
+        const data = await response.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+    }
+  };
+
+  // Mark notification as read
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const response = await fetch('/api/notifications/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId }),
+      });
+
+      if (response.ok) {
+        setNotifications(prev =>
+          prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  };
+
+  // Mark all as read
+  const markAllAsRead = async () => {
+    if (!session?.user?.id) return;
+    
+    try {
+      const response = await fetch('/api/notifications/read-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: session.user.id }),
+      });
+
+      if (response.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
+  };
+
+  // Get notification icon
+  const getNotificationIcon = (type: string, isRead: boolean) => {
+    const iconColor = isRead ? '#94a3b8' : '#2563eb';
+    
+    switch (type) {
+      case 'application':
+        return <span style={{ color: iconColor }}>📋</span>;
+      case 'message':
+        return <span style={{ color: iconColor }}>💬</span>;
+      case 'maintenance':
+        return <span style={{ color: iconColor }}>🔧</span>;
+      case 'payment':
+        return <span style={{ color: iconColor }}>💳</span>;
+      case 'reminder':
+        return <span style={{ color: iconColor }}>🔔</span>;
+      default:
+        return <span style={{ color: iconColor }}>📬</span>;
+    }
+  };
+
+  // Handle notification click
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.isRead) {
+      markAsRead(notification.id);
+    }
+    
+    if (notification.actionUrl) {
+      window.location.href = notification.actionUrl;
     }
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = window.localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored) as Partial<DismissedNotifications>;
-          setDismissed((prev) => ({
-            ...prev,
-            ...parsed,
-          }));
-        }
-      } catch {
-        // ignore storage errors
-      }
+    if (session?.user?.id) {
+      fetchNotifications();
+      
+      // Set up polling for new notifications
+      const interval = setInterval(fetchNotifications, 30000); // 30 seconds
+      return () => clearInterval(interval);
     }
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [session]);
 
-  const effectiveNotifications: NotificationData = {
-    newOrders: dismissed.newOrders ? 0 : notifications.newOrders,
-    openMessages: dismissed.openMessages ? 0 : notifications.openMessages,
-    unreadMessages: dismissed.unreadMessages ? 0 : notifications.unreadMessages,
-    unreadEmailThreads: dismissed.unreadEmailThreads
-      ? 0
-      : notifications.unreadEmailThreads,
-    pendingFriendRequests: dismissed.pendingFriendRequests
-      ? 0
-      : notifications.pendingFriendRequests,
-  };
-
-  const totalCount = isAdmin
-    ? effectiveNotifications.newOrders + effectiveNotifications.openMessages
-    :
-        effectiveNotifications.unreadMessages +
-        effectiveNotifications.pendingFriendRequests;
+  if (!session?.user?.id) {
+    return null;
+  }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant='ghost' className='relative'>
-          <div className='relative'>
-            <Bell className='h-5 w-5' />
-            {totalCount > 0 && (
-              <Badge
-                variant='destructive'
-                className='absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs rounded-full'
-              >
-                {totalCount > 9 ? '9+' : totalCount}
-              </Badge>
-            )}
-          </div>
+        <Button variant="ghost" size="sm" className="relative">
+          {unreadCount > 0 ? (
+            <BellRing className="h-5 w-5" />
+          ) : (
+            <Bell className="h-5 w-5" />
+          )}
+          {unreadCount > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Badge>
+          )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align='end' className='w-64'>
-        <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+      
+      <DropdownMenuContent align="end" className="w-80 p-0">
+        <DropdownMenuLabel className="flex items-center justify-between p-4">
+          <span>Notifications</span>
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={markAllAsRead}
+                className="text-xs h-auto p-1"
+              >
+                <CheckCheck className="h-3 w-3 mr-1" />
+                Mark all read
+              </Button>
+            )}
+            <Link href="/settings">
+              <Button variant="ghost" size="sm" className="text-xs h-auto p-1">
+                <Settings className="h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
+        </DropdownMenuLabel>
+        
         <DropdownMenuSeparator />
-        {isLoading ? (
-          <DropdownMenuItem>Loading...</DropdownMenuItem>
-        ) : totalCount === 0 ? (
-          <DropdownMenuItem>No new notifications</DropdownMenuItem>
-        ) : (
+        
+        <ScrollArea className="h-96">
+          {loading ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              Loading notifications...
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              No notifications yet
+            </div>
+          ) : (
+            notifications.map((notification) => (
+              <DropdownMenuItem
+                key={notification.id}
+                className="p-4 cursor-pointer focus:bg-accent"
+                onClick={() => handleNotificationClick(notification)}
+              >
+                <div className="flex items-start gap-3 w-full">
+                  <div className="flex-shrink-0 mt-0.5">
+                    {getNotificationIcon(notification.type, notification.isRead)}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium truncate ${
+                          notification.isRead ? 'text-muted-foreground' : 'text-foreground'
+                        }`}>
+                          {notification.title}
+                        </p>
+                        <p className={`text-sm mt-1 line-clamp-2 ${
+                          notification.isRead ? 'text-muted-foreground' : 'text-foreground'
+                        }`}>
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                        </p>
+                      </div>
+                      
+                      {!notification.isRead && (
+                        <div className="flex-shrink-0">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </DropdownMenuItem>
+            ))
+          )}
+        </ScrollArea>
+        
+        {notifications.length > 0 && (
           <>
-            {isAdmin && effectiveNotifications.newOrders > 0 && (
+            <DropdownMenuSeparator />
+            <div className="p-2">
               <DropdownMenuItem asChild>
-                <Link
-                  href='/admin/orders'
-                  className='cursor-pointer'
-                  onClick={() => dismissNotification('newOrders')}
-                >
-                  <div className='flex items-center justify-between w-full'>
-                    <span>New orders</span>
-                    <Badge variant='secondary'>
-                      {effectiveNotifications.newOrders}
-                    </Badge>
-                  </div>
+                <Link href={isAdmin ? "/admin/messages" : "/user/notifications"} className="w-full justify-center cursor-pointer">
+                  View all notifications
                 </Link>
               </DropdownMenuItem>
-            )}
-            {isAdmin && effectiveNotifications.openMessages > 0 && (
-              <DropdownMenuItem asChild>
-                <Link
-                  href='/admin/messages'
-                  className='cursor-pointer'
-                  onClick={() => dismissNotification('openMessages')}
-                >
-                  <div className='flex items-center justify-between w-full'>
-                    <span>Open messages</span>
-                    <Badge variant='secondary'>
-                      {effectiveNotifications.openMessages}
-                    </Badge>
-                  </div>
-                </Link>
-              </DropdownMenuItem>
-            )}
-            {!isAdmin && effectiveNotifications.unreadMessages > 0 && (
-              <DropdownMenuItem asChild>
-                <Link
-                  href='/user/profile/inbox'
-                  className='cursor-pointer'
-                  onClick={() => dismissNotification('unreadMessages')}
-                >
-                  <div className='flex items-center justify-between w-full'>
-                    <span>Unread messages</span>
-                    <Badge variant='secondary'>
-                      {effectiveNotifications.unreadMessages}
-                    </Badge>
-                  </div>
-                </Link>
-              </DropdownMenuItem>
-            )}
-            {!isAdmin && effectiveNotifications.pendingFriendRequests > 0 && (
-              <DropdownMenuItem asChild>
-                <Link
-                  href='/user/profile/inbox'
-                  className='cursor-pointer'
-                  onClick={() => dismissNotification('pendingFriendRequests')}
-                >
-                  <div className='flex items-center justify-between w-full'>
-                    <span>Friend requests</span>
-                    <Badge variant='secondary'>
-                      {effectiveNotifications.pendingFriendRequests}
-                    </Badge>
-                  </div>
-                </Link>
-              </DropdownMenuItem>
-            )}
+            </div>
           </>
         )}
       </DropdownMenuContent>

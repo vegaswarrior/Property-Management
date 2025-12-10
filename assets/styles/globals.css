@@ -30,6 +30,10 @@
   .h3-bold {
     @apply font-bold text-xl lg:text-2xl;
   }
+
+  .bg-translucent {
+    @apply bg-slate-900/70 backdrop-blur-md border border-white/10;
+  }
 }
 
 @theme inline {
@@ -144,12 +148,12 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground text-sm;
   }
   input,
   textarea,
   select {
-    @apply bg-background text-foreground placeholder:text-muted-foreground;
+    @apply bg-background text-black placeholder:text-muted-foreground;
   }
 }
 

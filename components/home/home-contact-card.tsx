@@ -50,31 +50,31 @@ const HomeContactCard = () => {
   };
 
   return (
-    <section className="my-16">
+    <section className="my-16 bg-white">
       <div className="container mx-auto max-w-4xl px-4 md:px-6">
-        <div className="rounded-2xl border border-white/10 bg-slate-950/70 shadow-xl p-5 md:p-6 grid gap-6 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 md:p-6 grid gap-6 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start">
           <form onSubmit={handleSubmit} className="space-y-3">
-            <h2 className="text-xl md:text-2xl font-semibold text-white">Have a question?</h2>
-            <p className="text-xs md:text-sm text-gray-300">
+            <h2 className="text-xl md:text-2xl font-semibold text-slate-900">Have a question?</h2>
+            <p className="text-xs md:text-sm text-slate-600">
               Drop a quick note and I&apos;ll get back to you. For project-level details, use the full contact page.
             </p>
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-300/90">
+                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
                   Name
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none focus:border-violet-400/80"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500"
                   placeholder="Your name"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-300/90">
+                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
                   Email
                 </label>
                 <input
@@ -88,14 +88,14 @@ const HomeContactCard = () => {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-300/90">
+              <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
                 Message
               </label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={3}
-                className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none focus:border-violet-400/80 resize-none"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 resize-none"
                 placeholder="How can I help?"
               />
             </div>
@@ -104,40 +104,40 @@ const HomeContactCard = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex items-center justify-center rounded-lg bg-violet-500 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Sending...' : 'Send'}
               </button>
               <a
                 href="/contact"
-                className="text-xs md:text-sm text-violet-300 hover:text-violet-200 underline"
+                className="text-xs md:text-sm text-emerald-700 hover:text-emerald-600 underline"
               >
                 Go to full contact page
               </a>
             </div>
 
             {error && (
-              <p className="text-xs text-rose-300">{error}</p>
+              <p className="text-xs text-red-600">{error}</p>
             )}
             {success && (
-              <p className="text-xs text-emerald-300">{success}</p>
+              <p className="text-xs text-emerald-700">{success}</p>
             )}
           </form>
 
-          <aside className="space-y-2 text-xs md:text-sm text-gray-200">
-            <p className="font-semibold text-sm md:text-base text-white">Quick Connect</p>
+          <aside className="space-y-2 text-xs md:text-sm text-slate-600">
+            <p className="font-semibold text-sm md:text-base text-slate-900">Quick Connect</p>
             <p>
               Whether it&apos;s a sizing question, an order concern, or an idea for a new design, this inbox is always
               open.
             </p>
             <div className="grid grid-cols-2 gap-2 text-[11px] md:text-xs">
-              <div className="rounded-lg border border-white/10 bg-slate-900/70 p-2">
-                <p className="font-semibold text-white">Reply Time</p>
-                <p className="text-gray-300">Usually within 24 hours</p>
+              <div className="rounded-lg border border-slate-200 bg-white p-2">
+                <p className="font-semibold text-slate-900">Reply Time</p>
+                <p className="text-slate-600">Usually within 24 hours</p>
               </div>
-              <div className="rounded-lg border border-white/10 bg-slate-900/70 p-2">
-                <p className="font-semibold text-white">Email</p>
-                <p className="text-gray-300 break-all">contact@rockenmyvibe.com</p>
+              <div className="rounded-lg border border-slate-200 bg-white p-2">
+                <p className="font-semibold text-slate-900">Email</p>
+                <p className="text-slate-600 break-all">contact@rockenmyvibe.com</p>
               </div>
             </div>
           </aside>

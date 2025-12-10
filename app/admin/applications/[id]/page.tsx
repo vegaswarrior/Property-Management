@@ -1,6 +1,8 @@
 import { requireAdmin } from '@/lib/auth-guard';
 import { prisma } from '@/db/prisma';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 
 interface AdminApplicationDetailPageProps {
   params: Promise<{ id: string }>;
@@ -37,6 +39,27 @@ export default async function AdminApplicationDetailPage({ params }: AdminApplic
   const unitName = application.unit?.name;
   const propertyName = application.unit?.property?.name;
   const unitLabel = propertyName && unitName ? `${propertyName} • ${unitName}` : propertyName || unitName || 'Unit';
+
+  const requestScreening = async (formData: FormData) => {
+    'use server';
+
+    const bundle = formData.get('screeningBundle');
+
+    const bundleValue = typeof bundle === 'string' && bundle ? bundle : 'full_package';
+
+    await prisma.rentalApplication.update({
+      where: { id: application.id },
+      data: {
+        screeningProvider: 'rentspree',
+        screeningBundle: bundleValue,
+        screeningStatus: 'requested',
+        screeningRequestedAt: new Date(),
+      },
+    });
+
+    revalidatePath('/admin/applications');
+    revalidatePath(`/admin/applications/${application.id}`);
+  };
 
   return (
     <main className='w-full px-4 py-8 md:px-0'>
@@ -103,6 +126,41 @@ export default async function AdminApplicationDetailPage({ params }: AdminApplic
                 <p className='whitespace-pre-wrap leading-relaxed'>{application.notes}</p>
               </div>
             )}
+          </section>
+
+          <section className='space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm'>
+            <h3 className='text-sm font-semibold text-slate-900'>Tenant screening</h3>
+            <div className='space-y-2 text-xs text-slate-600'>
+              <p>Order a screening package for this applicant. Results will appear in your connected provider.</p>
+              {application.screeningStatus && (
+                <p className='text-slate-500'>
+                  Current status: <span className='font-medium text-slate-800'>{application.screeningStatus}</span>
+                  {application.screeningBundle && ` • ${application.screeningBundle}`}
+                </p>
+              )}
+            </div>
+
+            <form action={requestScreening} className='space-y-3 text-sm'>
+              <div className='space-y-1'>
+                <label className='block text-xs font-medium text-slate-700'>Choose screening type</label>
+                <select
+                  name='screeningBundle'
+                  defaultValue={application.screeningBundle || 'full_package'}
+                  className='w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm'
+                >
+                  <option value='eviction_only'>Evictions only</option>
+                  <option value='background_only'>Background & address history</option>
+                  <option value='full_package'>Full package (credit, background, evictions)</option>
+                </select>
+              </div>
+
+              <button
+                type='submit'
+                className='inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-medium text-white hover:bg-emerald-500'
+              >
+                Request screening
+              </button>
+            </form>
           </section>
 
           <section className='space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm'>
@@ -261,6 +319,13 @@ export default async function AdminApplicationDetailPage({ params }: AdminApplic
                     },
                   });
                 }
+
+                // Revalidate all relevant paths and redirect
+                revalidatePath('/admin/applications');
+                revalidatePath('/admin/leases');
+                revalidatePath('/user/profile/rent-receipts');
+                revalidatePath('/user/profile/lease');
+                redirect('/admin/applications');
               }}
               className='space-y-4'
             >
@@ -299,6 +364,26 @@ export default async function AdminApplicationDetailPage({ params }: AdminApplic
                 className='inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white hover:bg-slate-800'
               >
                 Save decision
+              </button>
+            </form>
+
+            <form
+              action={async () => {
+                'use server';
+
+                await prisma.rentalApplication.delete({
+                  where: { id: application.id },
+                });
+
+                redirect('/admin/applications');
+              }}
+              className='pt-2'
+            >
+              <button
+                type='submit'
+                className='inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-medium text-red-700 hover:bg-red-100'
+              >
+                Delete application
               </button>
             </form>
 

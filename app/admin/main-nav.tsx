@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import React from 'react';
-import { Building2, FileText, Wrench, CreditCard, Settings2 } from 'lucide-react';
+import { Building2, FileText, Wrench, CreditCard, Settings2, Wallet, Palette, TrendingUp, MessageCircle } from 'lucide-react';
 
 const links = [
   {
@@ -32,6 +32,36 @@ const links = [
     icon: CreditCard,
   },
   {
+    title: 'Payouts',
+    description: 'Cash out collected rent',
+    href: '/admin/payouts',
+    icon: Wallet,
+  },
+  {
+    title: 'Analytics',
+    description: 'Financial reports & insights',
+    href: '/admin/analytics',
+    icon: TrendingUp,
+  },
+  {
+    title: 'Contact Inbox',
+    description: 'Support & contact requests',
+    href: '/admin/messages',
+    icon: MessageCircle,
+  },
+  {
+    title: 'Tenant Comms',
+    description: 'Tenant communications',
+    href: '/admin/tenant-messages',
+    icon: MessageCircle,
+  },
+  {
+    title: 'Branding',
+    description: 'Logo, subdomain & custom domain',
+    href: '/admin/branding',
+    icon: Palette,
+  },
+  {
     title: 'Settings',
     description: 'Team & property settings',
     href: '/admin/settings',
@@ -48,7 +78,7 @@ const MainNav = ({
   return (
     <nav
       className={cn(
-        'flex flex-col gap-1 text-sm text-slate-600',
+        'flex flex-col gap-2 text-base text-white',
         className
       )}
       {...props}
@@ -62,16 +92,14 @@ const MainNav = ({
             key={item.href}
             href={item.href}
             className={cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2 transition-colors',
-              isActive
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              'flex items-center gap-3 rounded-lg px-3 py-2',
+              isActive ? 'text-emerald-300' : 'text-white'
             )}
           >
-            <Icon className='h-4 w-4 shrink-0' />
+            <Icon className='h-5 w-5 shrink-0' />
             <div className='flex flex-col'>
-              <span className='font-medium text-xs'>{item.title}</span>
-              <span className='text-[11px] text-slate-400'>{item.description}</span>
+              <span className='font-medium text-sm'>{item.title}</span>
+              <span className='text-xs text-slate-200'>{item.description}</span>
             </div>
           </Link>
         );

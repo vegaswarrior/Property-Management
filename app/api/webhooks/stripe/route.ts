@@ -1,32 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { updateOrderToPaid } from '@/lib/actions/order-actions';
+import { prisma } from '@/db/prisma';
 
 export async function POST(req: NextRequest) {
-  // Build the webhook event
+  const payload = await req.text();
+  const signature = req.headers.get('stripe-signature') as string;
+
   const event = await Stripe.webhooks.constructEvent(
-    await req.text(),
-    req.headers.get('stripe-signature') as string,
+    payload,
+    signature,
     process.env.STRIPE_WEBHOOK_SECRET as string
   );
 
-  // Check for successful payment
   if (event.type === 'charge.succeeded') {
-    const { object } = event.data;
+    const charge = event.data.object as Stripe.Charge;
 
-    // Update order status
-    await updateOrderToPaid({
-      orderId: object.metadata.orderId,
-      paymentResult: {
-        id: object.id,
-        status: 'COMPLETED',
-        email_address: object.billing_details.email!,
-        pricePaid: (object.amount / 100).toFixed(),
-      },
-    });
+    if (charge.metadata?.orderId) {
+      await updateOrderToPaid({
+        orderId: charge.metadata.orderId,
+        paymentResult: {
+          id: charge.id,
+          status: 'COMPLETED',
+          email_address: charge.billing_details.email!,
+          pricePaid: (charge.amount / 100).toFixed(),
+        },
+      });
+    }
+
+    const paymentIntentIdRaw = charge.payment_intent;
+    const paymentIntentId =
+      typeof paymentIntentIdRaw === 'string'
+        ? paymentIntentIdRaw
+        : paymentIntentIdRaw?.id;
+
+    if (paymentIntentId) {
+      const now = new Date();
+
+      await prisma.rentPayment.updateMany({
+        where: {
+          stripePaymentIntentId: paymentIntentId,
+        },
+        data: {
+          status: 'paid',
+          paidAt: now,
+        },
+      });
+    }
 
     return NextResponse.json({
-      message: 'updateOrderToPaid was successful',
+      message: 'Webhook processed',
     });
   }
 

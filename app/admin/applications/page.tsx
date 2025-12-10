@@ -3,6 +3,7 @@ import { prisma } from '@/db/prisma';
 import { formatCurrency } from '@/lib/utils';
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { getOrCreateCurrentLandlord } from '@/lib/actions/landlord.actions';
 
 export const metadata: Metadata = {
   title: 'Admin Applications',
@@ -10,8 +11,22 @@ export const metadata: Metadata = {
 
 const AdminApplicationsPage = async () => {
   await requireAdmin();
+  const landlordResult = await getOrCreateCurrentLandlord();
+
+  if (!landlordResult.success) {
+    throw new Error(landlordResult.message || 'Unable to determine landlord');
+  }
+
+  const landlordId = landlordResult.landlord.id;
 
   const applications = await prisma.rentalApplication.findMany({
+    where: {
+      unit: {
+        property: {
+          landlordId,
+        },
+      },
+    },
     orderBy: { createdAt: 'desc' },
     include: {
       unit: {

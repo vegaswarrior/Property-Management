@@ -1,11 +1,26 @@
 import { requireAdmin } from '@/lib/auth-guard';
 import { prisma } from '@/db/prisma';
 import Link from 'next/link';
+import { getOrCreateCurrentLandlord } from '@/lib/actions/landlord.actions';
 
 export default async function AdminMaintenancePage() {
   await requireAdmin();
+  const landlordResult = await getOrCreateCurrentLandlord();
+
+  if (!landlordResult.success) {
+    throw new Error(landlordResult.message || 'Unable to determine landlord');
+  }
+
+  const landlordId = landlordResult.landlord.id;
 
   const tickets = await prisma.maintenanceTicket.findMany({
+    where: {
+      unit: {
+        property: {
+          landlordId,
+        },
+      },
+    },
     orderBy: { createdAt: 'desc' },
     include: {
       tenant: {

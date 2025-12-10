@@ -1,8 +1,8 @@
 import { auth } from '@/auth';
 import { prisma } from '@/db/prisma';
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
 import { formatCurrency } from '@/lib/utils';
+import RentPayClient from './rent-pay-client';
 
 export default async function UserProfileRentReceiptsPage() {
   const session = await auth();
@@ -35,12 +35,33 @@ export default async function UserProfileRentReceiptsPage() {
     },
   });
 
-  const currentPayments = (lease?.rentPayments || []).filter(
+  // Move-in payments (first month, last month, security deposit) - show regardless of due date
+  const moveInPayments = (lease?.rentPayments || []).filter(
+    (p) =>
+      p.status !== 'paid' &&
+      ['first_month_rent', 'last_month_rent', 'security_deposit'].includes(
+        (p.metadata as any)?.type || ''
+      )
+  );
+
+  // Regular monthly rent payments for current month
+  const regularCurrentPayments = (lease?.rentPayments || []).filter(
     (p) =>
       p.dueDate >= startOfMonth &&
       p.dueDate < startOfNextMonth &&
-      p.status !== 'paid'
+      p.status !== 'paid' &&
+      !['first_month_rent', 'last_month_rent', 'security_deposit'].includes(
+        (p.metadata as any)?.type || ''
+      )
   );
+
+  // Combine move-in payments with regular current payments (deduplicated)
+  const currentPayments = [
+    ...moveInPayments,
+    ...regularCurrentPayments.filter(
+      (p) => !moveInPayments.some((m) => m.id === p.id)
+    ),
+  ];
 
   const currentTotalAmount = currentPayments.reduce((sum, p) => {
     const amt = Number(p.amount);
@@ -49,149 +70,152 @@ export default async function UserProfileRentReceiptsPage() {
 
   const pastPayments = (lease?.rentPayments || []).filter((p) => p.status === 'paid');
 
-  async function payCurrentRent() {
-    'use server';
-
-    if (!currentPayments.length) {
-      return;
-    }
-
-    const nowPaidAt = new Date();
-
-    await prisma.rentPayment.updateMany({
-      where: {
-        id: {
-          in: currentPayments.map((p) => p.id),
-        },
-      },
-      data: {
-        status: 'paid',
-        paidAt: nowPaidAt,
-      },
-    });
-
-    revalidatePath('/user/profile/rent-receipts');
-  }
+  const firstMonth = currentPayments.find(
+    (p) => (p.metadata as any)?.type === 'first_month_rent'
+  );
+  const lastMonth = currentPayments.find(
+    (p) => (p.metadata as any)?.type === 'last_month_rent'
+  );
+  const securityDeposit = currentPayments.find(
+    (p) => (p.metadata as any)?.type === 'security_deposit'
+  );
 
   return (
-    <div className='w-full px-4 py-8 md:px-8'>
-      <div className='max-w-4xl mx-auto space-y-6'>
-        <div>
-          <h1 className='text-2xl md:text-3xl font-semibold text-slate-900 mb-1'>Rent & receipts</h1>
-          <p className='text-sm text-slate-600'>View your current rent and past payment receipts.</p>
+    <div className='w-full min-h-screen px-4 py-8 md:px-8'>
+      <div className='max-w-5xl mx-auto space-y-8'>
+        <div className='flex flex-col gap-2'>
+          <h1 className='text-3xl md:text-4xl font-bold text-white'>Rent &amp; Receipts</h1>
+          <p className='text-sm md:text-base text-gray-300'>View your current rent status and past payment history.</p>
         </div>
 
         {!lease ? (
-          <div className='rounded-xl border border-slate-200 bg-white shadow-sm px-4 py-6 text-sm text-slate-500'>
-            We don&apos;t see an active lease linked to your account yet. Please contact management if you believe this is
-            a mistake.
+          <div className='backdrop-blur-md bg-white/10 border border-white/20 rounded-xl px-6 py-8 shadow-lg text-sm text-gray-200'>
+            We don&apos;t see an active lease linked to your account yet. Please contact management if you believe this is a
+            mistake.
           </div>
         ) : (
           <>
-            <div className='rounded-xl border border-slate-200 bg-white shadow-sm p-6 space-y-3 text-sm text-slate-700'>
-              <div className='flex items-center justify-between gap-4'>
-                <div>
-                  <p className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>Unit</p>
-                  <p className='text-sm text-slate-800'>
+            <div className='backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-8 shadow-lg space-y-4 text-sm text-gray-100'>
+              <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
+                <div className='space-y-1'>
+                  <p className='text-[11px] font-semibold text-gray-300 uppercase tracking-[0.16em]'>Unit</p>
+                  <p className='text-base md:text-lg font-medium text-white'>
                     {lease.unit.property?.name || 'Property'} • {lease.unit.name}
                   </p>
                 </div>
-                <div className='text-right'>
-                  <p className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>Monthly rent</p>
-                  <p className='text-base font-semibold text-slate-900'>
+                <div className='text-left md:text-right space-y-1'>
+                  <p className='text-[11px] font-semibold text-gray-300 uppercase tracking-[0.16em]'>Monthly rent</p>
+                  <p className='text-base md:text-xl font-semibold text-white'>
                     {formatCurrency(lease.rentAmount.toString())}
                   </p>
                 </div>
               </div>
 
-              <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-600 pt-3 border-t border-slate-200 mt-2'>
-                <div>
-                  <p className='font-semibold text-slate-500 uppercase tracking-wide mb-0.5'>Billing day</p>
+              <div className='grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-white/10 text-xs md:text-sm text-gray-200'>
+                <div className='space-y-1'>
+                  <p className='font-semibold text-gray-300 uppercase tracking-[0.16em] mb-0.5 text-[11px]'>Billing day</p>
                   <p>Day {lease.billingDayOfMonth} of each month</p>
                 </div>
-                <div>
-                  <p className='font-semibold text-slate-500 uppercase tracking-wide mb-0.5'>Lease period</p>
+                <div className='space-y-1'>
+                  <p className='font-semibold text-gray-300 uppercase tracking-[0.16em] mb-0.5 text-[11px]'>Lease period</p>
                   <p>
                     {new Date(lease.startDate).toLocaleDateString()} –{' '}
                     {lease.endDate ? new Date(lease.endDate).toLocaleDateString() : 'Ongoing'}
                   </p>
                 </div>
-                <div>
-                  <p className='font-semibold text-slate-500 uppercase tracking-wide mb-0.5'>Status</p>
+                <div className='space-y-1'>
+                  <p className='font-semibold text-gray-300 uppercase tracking-[0.16em] mb-0.5 text-[11px]'>Status</p>
                   <p className='capitalize'>{lease.status}</p>
                 </div>
               </div>
             </div>
 
-            <div className='rounded-xl border border-slate-200 bg-white shadow-sm p-6 space-y-4'>
+            <div className='backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-8 shadow-lg space-y-4 text-sm text-gray-100'>
               <div className='flex items-center justify-between gap-4'>
                 <div>
-                  <h2 className='text-sm font-semibold text-slate-900'>Current month&apos;s rent</h2>
-                  <p className='text-xs text-slate-500'>Pay this month&apos;s rent securely.</p>
+                  <h2 className='text-sm md:text-base font-semibold text-white'>Move-in amounts</h2>
+                  <p className='text-xs text-gray-300'>First month, last month, and security deposit.</p>
                 </div>
               </div>
 
               {!currentPayments.length ? (
-                <p className='text-sm text-slate-500'>You don&apos;t have an unpaid rent charge for this month.</p>
+                <p className='text-sm text-gray-200'>You don&apos;t have any unpaid move-in charges.</p>
               ) : (
-                <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm text-slate-700'>
-                  <div>
-                    <p className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>Due date</p>
-                    <p>{new Date(currentPayments[0].dueDate).toLocaleDateString()}</p>
+                <div className='space-y-4 text-sm text-gray-100'>
+                  <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-gray-200'>
+                    {firstMonth && (
+                      <div>
+                        <p className='font-semibold text-gray-300 uppercase tracking-[0.16em] mb-0.5 text-[11px]'>First month&apos;s rent</p>
+                        <p>{formatCurrency(firstMonth.amount.toString())}</p>
+                      </div>
+                    )}
+                    {lastMonth && (
+                      <div>
+                        <p className='font-semibold text-gray-300 uppercase tracking-[0.16em] mb-0.5 text-[11px]'>Last month&apos;s rent</p>
+                        <p>{formatCurrency(lastMonth.amount.toString())}</p>
+                      </div>
+                    )}
+                    {securityDeposit && (
+                      <div>
+                        <p className='font-semibold text-gray-300 uppercase tracking-[0.16em] mb-0.5 text-[11px]'>Security deposit</p>
+                        <p>{formatCurrency(securityDeposit.amount.toString())}</p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <p className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>Amount due</p>
-                    <p className='text-base font-semibold text-slate-900'>
-                      {formatCurrency(currentTotalAmount.toString())}
-                    </p>
-                  </div>
-                  <div className='sm:text-right'>
-                    <form action={payCurrentRent}>
-                      <button
-                        type='submit'
-                        className='inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-xs font-semibold text-white hover:bg-slate-800'
-                      >
-                        Pay rent
-                      </button>
-                    </form>
-                    <p className='mt-1 text-[11px] text-slate-400'>Payments are securely processed and recorded.</p>
+
+                  <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
+                    <div>
+                      <p className='text-[11px] font-semibold text-gray-300 uppercase tracking-[0.16em]'>Total due now</p>
+                      <p className='text-base md:text-xl font-semibold text-white'>
+                        {formatCurrency(currentTotalAmount.toString())}
+                      </p>
+                    </div>
+                    <div className='sm:text-right'>
+                      <RentPayClient
+                        rentPaymentIds={currentPayments.map((p) => p.id)}
+                        totalInCents={Math.round(currentTotalAmount * 100)}
+                      />
+                      <p className='mt-1 text-[11px] text-gray-300'>Payments are securely processed and recorded via Stripe.</p>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className='rounded-xl border border-slate-200 bg-white shadow-sm p-6 space-y-3'>
+            <div className='backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-8 shadow-lg space-y-4 text-sm text-gray-100'>
               <div className='flex items-center justify-between gap-4 mb-1'>
-                <h2 className='text-sm font-semibold text-slate-900'>Past rent receipts</h2>
-                <span className='text-[11px] text-slate-500'>{pastPayments.length} payment{pastPayments.length === 1 ? '' : 's'}</span>
+                <h2 className='text-sm md:text-base font-semibold text-white'>Past rent receipts</h2>
+                <span className='text-[11px] text-gray-300'>
+                  {pastPayments.length} payment{pastPayments.length === 1 ? '' : 's'}
+                </span>
               </div>
 
               {pastPayments.length === 0 ? (
-                <p className='text-sm text-slate-500'>No past rent payments recorded yet.</p>
+                <p className='text-sm text-gray-200'>No past rent payments recorded yet.</p>
               ) : (
                 <div className='overflow-x-auto'>
                   <table className='min-w-full text-xs'>
-                    <thead className='bg-slate-50'>
+                    <thead className='bg-white/10'>
                       <tr>
-                        <th className='px-3 py-2 text-left font-medium text-slate-500'>Paid on</th>
-                        <th className='px-3 py-2 text-left font-medium text-slate-500'>For month of</th>
-                        <th className='px-3 py-2 text-left font-medium text-slate-500'>Amount</th>
-                        <th className='px-3 py-2 text-left font-medium text-slate-500'>Status</th>
+                        <th className='px-3 py-2 text-left font-medium text-gray-200'>Paid on</th>
+                        <th className='px-3 py-2 text-left font-medium text-gray-200'>For month of</th>
+                        <th className='px-3 py-2 text-left font-medium text-gray-200'>Amount</th>
+                        <th className='px-3 py-2 text-left font-medium text-gray-200'>Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pastPayments.map((p) => (
-                        <tr key={p.id} className='border-t border-slate-100'>
-                          <td className='px-3 py-2 align-top text-slate-700'>
+                        <tr key={p.id} className='border-t border-white/10'>
+                          <td className='px-3 py-2 align-top text-gray-100'>
                             {p.paidAt ? new Date(p.paidAt).toLocaleString() : '—'}
                           </td>
-                          <td className='px-3 py-2 align-top text-slate-700'>
+                          <td className='px-3 py-2 align-top text-gray-100'>
                             {new Date(p.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}
                           </td>
-                          <td className='px-3 py-2 align-top text-slate-700'>
+                          <td className='px-3 py-2 align-top text-gray-100'>
                             {formatCurrency(p.amount.toString())}
                           </td>
-                          <td className='px-3 py-2 align-top text-slate-700 capitalize'>{p.status}</td>
+                          <td className='px-3 py-2 align-top text-gray-100 capitalize'>{p.status}</td>
                         </tr>
                       ))}
                     </tbody>

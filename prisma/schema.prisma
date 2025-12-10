@@ -53,6 +53,7 @@ model User {
   paymentMethod       String?
   phoneNumber         String?
   phoneVerified       DateTime?                        @db.Timestamp(6)
+  notificationPreferences Json?                         @db.Json // { email: boolean, sms: boolean, both: boolean }
   createdAt           DateTime                         @default(now()) @db.Timestamp(6)
   updatedAt           DateTime                         @updatedAt
   account             Account[]
@@ -70,8 +71,11 @@ model User {
   blogReactions       BlogReaction[]
   leasesAsTenant      Lease[]
   rentPayments        RentPayment[]
+  cashPayments        CashPayment[]
   maintenanceTickets  MaintenanceTicket[]
   rentalApplications  RentalApplication[]
+  landlordsOwned      Landlord[]
+  notifications       Notification[]
 }
 
 model Account {
@@ -349,6 +353,34 @@ model TaxSettings {
   @@unique([id])
 }
 
+// Cash payment tracking for retail location payments
+model CashPayment {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  referenceId       String   @unique
+  paymentIntentId   String   @db.Uuid
+  tenantId          String   @db.Uuid
+  propertyId        String   @db.Uuid
+  amount            Decimal  @db.Decimal(10, 2)
+  fee               Decimal  @db.Decimal(10, 2)
+  status            String   @default("pending") // pending, completed, expired, failed
+  partnerId         String   // paynearme, greendot, moneygram
+  barcodeData       String   // JSON data for barcode
+  confirmationNumber String? // Retail location confirmation
+  expiresAt         DateTime
+  processedAt       DateTime?
+  createdAt         DateTime @default(now()) @db.Timestamp(6)
+  updatedAt         DateTime @updatedAt @db.Timestamp(6)
+
+  tenant    User     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property  Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([referenceId])
+  @@index([tenantId])
+  @@index([propertyId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
 model Thread {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   type            String   @default("contact") // contact, support, dm
@@ -360,7 +392,7 @@ model Thread {
   createdAt       DateTime @default(now()) @db.Timestamp(6)
   updatedAt       DateTime @updatedAt
 
-  messages     Message[]
+  messages           Message[]
   participants ThreadParticipant[]
 }
 
@@ -474,6 +506,36 @@ model SupportStatus {
   updatedAt DateTime @default(now()) @db.Timestamp(6)
 }
 
+model Landlord {
+  id                     String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                   String
+  subdomain              String     @unique
+  ownerUserId            String?    @db.Uuid
+  stripeConnectAccountId String?
+  stripeOnboardingStatus String?
+  createdAt              DateTime   @default(now()) @db.Timestamp(6)
+  updatedAt              DateTime   @updatedAt
+
+  inviteViaEmail         Boolean    @default(true)
+  inviteViaSms           Boolean    @default(false)
+
+  // Branding
+  logoUrl                String?
+  customDomain           String?    @unique
+
+  // Onboarding / intake fields
+  unitsEstimateMin       Int?
+  unitsEstimateMax       Int?
+  ownsProperties         Boolean?   @default(false)
+  managesForOthers       Boolean?   @default(false)
+  useSubdomain           Boolean    @default(true)
+
+  owner      User?      @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  properties Property[]
+  payouts    Payout[]
+  platformFees PlatformFee[]
+}
+
 model Property {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
@@ -484,7 +546,12 @@ model Property {
   createdAt   DateTime @default(now()) @db.Timestamp(6)
   updatedAt   DateTime @updatedAt
 
-  units Unit[]
+  landlordId String?   @db.Uuid
+
+  landlord Landlord? @relation(fields: [landlordId], references: [id], onDelete: SetNull)
+
+  units       Unit[]
+  cashPayments CashPayment[]
 }
 
 model Unit {
@@ -541,8 +608,45 @@ model RentPayment {
   createdAt     DateTime @default(now()) @db.Timestamp(6)
   updatedAt     DateTime @updatedAt
 
+  payoutId String? @db.Uuid
+
   lease  Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
   tenant User  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  payout Payout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+}
+
+model Payout {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landlordId     String   @db.Uuid
+  amount         Decimal  @db.Decimal(12, 2)
+  status         String   @default("pending") // pending, processing, paid, failed
+  initiatedAt    DateTime @default(now()) @db.Timestamp(6)
+  paidAt         DateTime? @db.Timestamp(6)
+  stripeTransferId String?
+  metadata       Json?    @db.Json
+
+  landlord Landlord @relation(fields: [landlordId], references: [id], onDelete: Cascade)
+  rentPayments RentPayment[]
+  platformFees PlatformFee[]
+
+  @@index([landlordId])
+}
+
+model PlatformFee {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payoutId    String   @db.Uuid
+  landlordId  String   @db.Uuid
+  amount      Decimal  @db.Decimal(12, 2)
+  type        String   @default("instant_payout_fee") // e.g. instant_payout_fee
+  createdAt   DateTime @default(now()) @db.Timestamp(6)
+  metadata    Json?    @db.Json
+
+  payout   Payout   @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  landlord Landlord @relation(fields: [landlordId], references: [id], onDelete: Cascade)
+
+  @@index([landlordId])
+  @@index([payoutId])
 }
 
 model MaintenanceTicket {
@@ -576,9 +680,32 @@ model RentalApplication {
   adminResponse String?
   propertySlug  String?
   status       String   @default("pending") // pending, approved, rejected, withdrawn
+  screeningProvider String?
+  screeningBundle   String? // e.g. eviction_only, background_only, full_package
+  screeningStatus   String? // requested, in_progress, complete, failed
+  screeningReportUrl String?
+  screeningRequestedAt DateTime? @db.Timestamp(6)
+  screeningCompletedAt DateTime? @db.Timestamp(6)
   createdAt    DateTime @default(now()) @db.Timestamp(6)
   updatedAt    DateTime @updatedAt
 
   unit      Unit? @relation(fields: [unitId], references: [id], onDelete: Cascade)
   applicant User? @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+}
+
+model Notification {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @db.Uuid
+  type        String   // application, message, maintenance, payment, reminder
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  actionUrl   String?  // URL to redirect when clicked
+  metadata    Json?    // Additional data like applicationId, ticketId, etc.
+  createdAt   DateTime @default(now()) @db.Timestamp(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
 }

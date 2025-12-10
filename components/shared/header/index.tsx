@@ -3,12 +3,46 @@ import Link from "next/link";
 import Menu from "./menu";
 import CategoryDrawer from './category-drawer';
 import { getCategoryTree } from '@/lib/actions/product.actions';
+import { prisma } from '@/db/prisma';
+import { headers } from 'next/headers';
+
+async function getLandlordForRequest() {
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+  const rawApex = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+
+  const bareHost = host.split(':')[0].toLowerCase();
+  let subdomain: string | null = null;
+
+  if (rawApex) {
+    let apex = rawApex.trim().toLowerCase();
+    if (apex.startsWith('http://')) apex = apex.slice(7);
+    if (apex.startsWith('https://')) apex = apex.slice(8);
+    if (apex.endsWith('/')) apex = apex.slice(0, -1);
+    const apexBase = apex.split(':')[0];
+
+    if (bareHost !== apexBase && bareHost.endsWith(`.${apexBase}`)) {
+      subdomain = bareHost.slice(0, bareHost.length - apexBase.length - 1);
+    }
+  }
+
+  if (!subdomain && bareHost.endsWith('.localhost')) {
+    subdomain = bareHost.slice(0, bareHost.length - '.localhost'.length);
+  }
+
+  if (!subdomain) return null;
+
+  const landlord = await prisma.landlord.findUnique({ where: { subdomain } });
+  return landlord;
+}
 
 const Header = async () => {
   const categories = await getCategoryTree();
+  const landlord = await getLandlordForRequest();
+  const displayName = landlord?.name || 'Property Management';
 
   return ( 
-    <header className="w-full bg-gradient-to-r from-sky-700 via-blue-500 to-cyan-500">
+    <header className="w-full bg-transparent border-b border-slate-200 text-white">
       {/* Mobile header: hamburger left, logo centered, menu (three dots) right */}
       <div className="wrapper flex items-center justify-between md:hidden">
         <div className="flex items-center">
@@ -38,13 +72,17 @@ const Header = async () => {
           <Link href='/' className="flex items-center">
             <CategoryDrawer />
             <div className="relative w-36 h-36">
-              <Image src='/images/logo.svg'
+              <Image 
+                src={landlord?.logoUrl || '/images/logo.svg'}
                 fill
                 className="object-contain"
-                alt="Property Management Logo"
+                alt={`${displayName} Logo`}
                 priority={true}
               />
             </div>
+            <span className='hidden lg:block font-bold text-2xl ml-3'>
+              {displayName}
+            </span>
           </Link>
         </div>
 

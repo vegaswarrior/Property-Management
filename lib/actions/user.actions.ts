@@ -21,6 +21,9 @@ import { revalidatePath } from 'next/cache';
 import { Prisma } from '@prisma/client';
 import { getMyCart } from './cart.actions';
 import { sendVerificationEmailToken } from './auth.actions';
+import { redirect } from 'next/navigation';
+import { getOrCreateCurrentLandlord } from './landlord.actions';
+import { getSubdomainRedirectUrl } from '../utils/subdomain-redirect';
 
 // Sign in the user with credentials
 export async function signInWithCredentials(
@@ -33,9 +36,39 @@ export async function signInWithCredentials(
       password: formData.get('password'),
     });
 
-    await signIn('credentials', user);
+    const rawCallbackUrl = formData.get('callbackUrl');
+    const callbackUrl =
+      typeof rawCallbackUrl === 'string' && rawCallbackUrl.trim().startsWith('/')
+        ? rawCallbackUrl.trim()
+        : '/';
 
-    return { success: true, message: 'Signed in successfully' };
+    // Sign in the user
+    const result = await signIn('credentials', {
+      ...user,
+      redirect: false,
+    });
+
+    if (!result || result.error) {
+      return { success: false, message: 'Invalid email or password' };
+    }
+
+    // Get the authenticated user to determine redirect
+    const authenticatedUser = await prisma.user.findUnique({
+      where: { email: user.email },
+      select: { id: true, role: true },
+    });
+
+    if (!authenticatedUser) {
+      return { success: false, message: 'User not found' };
+    }
+
+    // Determine the correct redirect URL based on subdomain and user role
+    const redirectUrl = await getSubdomainRedirectUrl(
+      authenticatedUser.role,
+      authenticatedUser.id
+    );
+
+    redirect(redirectUrl);
   } catch (error) {
     if (isRedirectError(error)) {
       throw error;
@@ -71,11 +104,18 @@ export async function signUpUser(prevState: unknown, formData: FormData) {
 
     user.password = await hash(user.password);
 
+    const rawRole = formData.get('role');
+    const roleValue =
+      rawRole === 'tenant' || rawRole === 'landlord' || rawRole === 'property_manager'
+        ? (rawRole as string)
+        : 'tenant';
+
     await prisma.user.create({
       data: {
         name: user.name,
         email: user.email,
         password: user.password,
+        role: roleValue,
       },
     });
 
@@ -84,9 +124,19 @@ export async function signUpUser(prevState: unknown, formData: FormData) {
     await signIn('credentials', {
       email: user.email,
       password: plainPassword,
+      redirect: false,
     });
 
-    return { success: true, message: 'User registered successfully' };
+    const rawCallbackUrl = formData.get('callbackUrl');
+    if (rawCallbackUrl && typeof rawCallbackUrl === 'string' && rawCallbackUrl.trim().length > 0) {
+      redirect(rawCallbackUrl);
+    }
+
+    if (roleValue === 'tenant') {
+      redirect('/user/applications');
+    } else {
+      redirect('/onboarding/role');
+    }
   } catch (error) {
     if (isRedirectError(error)) {
       throw error;
@@ -622,6 +672,79 @@ export async function updatePhoneNumber(phoneNumber: string) {
       success: true,
       message: 'Phone number updated successfully',
     };
+  } catch (error) {
+    return { success: false, message: formatError(error) };
+  }
+}
+
+export async function setUserRoleAndLandlordIntake(data: {
+  role: 'tenant' | 'landlord';
+  unitsEstimateRange?: '0-10' | '11-50' | '51-200' | '200+';
+  ownsProperties?: boolean;
+  managesForOthers?: boolean;
+  useSubdomain?: boolean;
+}) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { success: false, message: 'Not authenticated' };
+    }
+
+    const userId = session.user.id as string;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: data.role },
+    });
+
+    if (data.role === 'landlord') {
+      const landlordResult = await getOrCreateCurrentLandlord();
+
+      if (!landlordResult.success) {
+        return {
+          success: false,
+          message: landlordResult.message || 'Unable to initialize landlord workspace',
+        };
+      }
+
+      let unitsEstimateMin: number | null = null;
+      let unitsEstimateMax: number | null = null;
+
+      switch (data.unitsEstimateRange) {
+        case '0-10':
+          unitsEstimateMin = 0;
+          unitsEstimateMax = 10;
+          break;
+        case '11-50':
+          unitsEstimateMin = 11;
+          unitsEstimateMax = 50;
+          break;
+        case '51-200':
+          unitsEstimateMin = 51;
+          unitsEstimateMax = 200;
+          break;
+        case '200+':
+          unitsEstimateMin = 200;
+          unitsEstimateMax = null;
+          break;
+        default:
+          break;
+      }
+
+      await prisma.landlord.update({
+        where: { id: landlordResult.landlord.id },
+        data: {
+          unitsEstimateMin: unitsEstimateMin ?? undefined,
+          unitsEstimateMax: unitsEstimateMax ?? undefined,
+          ownsProperties: data.ownsProperties ?? false,
+          managesForOthers: data.managesForOthers ?? false,
+          useSubdomain: data.useSubdomain ?? true,
+        },
+      });
+    }
+
+    return { success: true, message: 'Onboarding preferences saved' };
   } catch (error) {
     return { success: false, message: formatError(error) };
   }

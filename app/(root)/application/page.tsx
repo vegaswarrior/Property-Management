@@ -50,11 +50,21 @@ export default function ApplicationPage() {
   const [submitted, setSubmitted] = useState(false);
 
   const onSubmit = async (values: z.infer<typeof applicationSchema>) => {
-    await fetch("/api/applications", {
+    const res = await fetch("/api/applications", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...values, propertySlug }),
     });
+    if (res.status === 401) {
+      const callbackUrl = propertySlug
+        ? `/application?property=${encodeURIComponent(propertySlug)}`
+        : "/application";
+      window.location.href = `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+      return;
+    }
+    if (!res.ok) {
+      return;
+    }
     setSubmitted(true);
   };
 

@@ -12,6 +12,8 @@ import { APP_NAME } from '@/lib/constants';
 import CredentialsSignInForm from './credentials-signin-form';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
+import { prisma } from '@/db/prisma';
 
 export const metadata: Metadata = {
   title: 'Sign In',
@@ -30,6 +32,32 @@ const SignInPage = async (props: {
     return redirect(callbackUrl || '/');
   }
 
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+  const apex = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+
+  let landlordName: string | null = null;
+
+  if (apex) {
+    const bareHost = host.split(':')[0].toLowerCase();
+    const apexLower = apex.toLowerCase();
+
+    if (bareHost !== apexLower && bareHost.endsWith(`.${apexLower}`)) {
+      const subdomain = bareHost.slice(0, bareHost.length - apexLower.length - 1);
+      if (subdomain) {
+        const landlord = await prisma.landlord.findUnique({ where: { subdomain } });
+        if (landlord) {
+          landlordName = landlord.name;
+        }
+      }
+    }
+  }
+
+  const title = landlordName ? `Sign in to ${landlordName}` : 'Sign In';
+  const description = landlordName
+    ? `Access your ${landlordName} resident or landlord account.`
+    : 'Sign in to your account';
+
   return (
     <div className='w-full max-w-md mx-auto'>
       <Card>
@@ -43,9 +71,9 @@ const SignInPage = async (props: {
               priority={true}
             />
           </Link>
-          <CardTitle className='text-center'>Sign In</CardTitle>
+          <CardTitle className='text-center'>{title}</CardTitle>
           <CardDescription className='text-center'>
-            Sign in to your account
+            {description}
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>

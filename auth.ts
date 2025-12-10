@@ -2,7 +2,6 @@ import NextAuth from 'next-auth';
 import { authConfig } from './auth.config';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/db/prisma';
-import { cookies } from 'next/headers';
 import { compare } from './lib/encrypt';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
@@ -108,25 +107,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         if (trigger === 'signIn' || trigger === 'signUp') {
-          const cookiesObject = await cookies();
-          const sessionCartId = cookiesObject.get('sessionCartId')?.value;
-
-          if (sessionCartId) {
-            const sessionCart = await prisma.cart.findFirst({
-              where: { sessionCartId },
-            });
-
-            if (sessionCart) {
-              // Delete current user cart
-              await prisma.cart.deleteMany({
-                where: { userId: user.id },
-              });
-
-              // Assign new cart
-              await prisma.cart.update({
-                where: { id: sessionCart.id },
-                data: { userId: user.id },
-              });
+          // Transfer session cart to user in a server action
+          // This avoids using next/headers in the auth config
+          if (user.id) {
+            try {
+              const { transferSessionCartToUser } = await import('./lib/actions/auth-actions');
+              await transferSessionCartToUser(user.id);
+            } catch (error) {
+              console.error('Failed to transfer session cart:', error);
             }
           }
         }

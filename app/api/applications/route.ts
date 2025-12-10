@@ -2,10 +2,47 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/db/prisma";
 import { auth } from "@/auth";
+import { getLandlordBySubdomain } from "@/lib/actions/landlord.actions";
 
 export async function POST(req: NextRequest) {
   try {
+    const host = req.headers.get("host") || "";
+    const apex = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "";
+
+    const bareHost = host.split(":")[0].toLowerCase();
+    const apexLower = apex.toLowerCase();
+
+    let landlordId: string | null = null;
+
+    if (apexLower && bareHost.endsWith(`.${apexLower}`) && bareHost !== apexLower) {
+      const subdomain = bareHost.slice(0, bareHost.length - apexLower.length - 1);
+
+      if (subdomain) {
+        const landlordResult = await getLandlordBySubdomain(subdomain);
+
+        if (!landlordResult.success) {
+          return NextResponse.json(
+            { success: false, message: landlordResult.message || "Landlord not found for this subdomain." },
+            { status: 404 }
+          );
+        }
+
+        landlordId = landlordResult.landlord.id;
+      }
+    }
+
+    if (!landlordId) {
+      return NextResponse.json(
+        { success: false, message: "Missing or invalid landlord context for this request." },
+        { status: 400 }
+      );
+    }
+
     const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, message: 'Not authenticated' }, { status: 401 });
+    }
 
     const body = await req.json();
     const {
@@ -60,12 +97,7 @@ export async function POST(req: NextRequest) {
       .filter(Boolean)
       .join("\n");
 
-    const existingUser = email
-      ? await prisma.user.findUnique({ where: { email } })
-      : null;
-
-    const applicantId =
-      existingUser?.id || (session?.user?.email === email ? (session.user.id as string | undefined) : undefined);
+    const applicantId = session.user.id as string;
 
     const unit = propertySlug
       ? await prisma.unit.findFirst({
@@ -73,6 +105,7 @@ export async function POST(req: NextRequest) {
             isAvailable: true,
             property: {
               slug: propertySlug,
+              landlordId,
             },
           },
           orderBy: { createdAt: "asc" },
@@ -88,7 +121,7 @@ export async function POST(req: NextRequest) {
         status: "pending",
         propertySlug: propertySlug || null,
         unitId: unit?.id ?? null,
-        applicantId: applicantId ?? null,
+        applicantId,
       },
     });
 

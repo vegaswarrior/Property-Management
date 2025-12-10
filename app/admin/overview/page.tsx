@@ -2,6 +2,8 @@ import { Metadata } from 'next';
 import { requireAdmin } from '@/lib/auth-guard';
 import { prisma } from '@/db/prisma';
 import { Building2, Users, FileText, Wrench } from 'lucide-react';
+import { getOrCreateCurrentLandlord } from '@/lib/actions/landlord.actions';
+import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
   title: 'Property Dashboard',
@@ -10,17 +12,58 @@ export const metadata: Metadata = {
 const AdminOverviewPage = async () => {
   await requireAdmin();
 
+  const landlordResult = await getOrCreateCurrentLandlord();
+
+  if (!landlordResult.success) {
+    throw new Error(landlordResult.message || 'Unable to determine landlord');
+  }
+
+  const landlordId = landlordResult.landlord.id;
+
   const [
     propertiesCount,
     applicationsCount,
     tenantsCount,
     ticketsCount,
   ] = await Promise.all([
-    prisma.product.count(),
-    prisma.order.count(),
-    prisma.user.count({ where: { role: 'tenant' } }),
-    prisma.maintenanceTicket.count(),
+    prisma.property.count({ where: { landlordId } }),
+    prisma.rentalApplication.count({
+      where: {
+        unit: {
+          property: {
+            landlordId,
+          },
+        },
+      },
+    }),
+    prisma.user.count({
+      where: {
+        role: 'tenant',
+        leasesAsTenant: {
+          some: {
+            unit: {
+              property: {
+                landlordId,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.maintenanceTicket.count({
+      where: {
+        unit: {
+          property: {
+            landlordId,
+          },
+        },
+      },
+    }),
   ]);
+
+  if (propertiesCount === 0) {
+    redirect('/admin/onboarding');
+  }
 
   return (
     <div className='w-full px-4 py-8 md:px-0'>

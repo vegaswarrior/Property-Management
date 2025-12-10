@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang='en' suppressHydrationWarning>
-      <body className='bg-gradient-to-r from-sky-700 via-blue-500 to-cyan-500 text-black flex flex-col min-h-screen overflow-x-hidden'>
+      <body className='bg-gradient-to-r from-teal-700 to-emerald-500 text-white flex flex-col min-h-screen overflow-x-hidden'>
         <ThemeProvider
           attribute='class'
           defaultTheme='light'
@@ -32,7 +32,7 @@ export default function RootLayout({
         >
           <PageViewTracker />
           <div
-            className='w-full text-[11px] md:text-xs font-medium tracking-tight flex items-center overflow-hidden bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-500 shadow-sm'
+            className='w-full text-sm md:text-sm font-medium tracking-tight flex items-center overflow-hidden bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-500 shadow-sm'
             style={{ height: '24px' }}
           >
             <div className='banner-marquee flex items-center gap-6 px-4 text-white whitespace-nowrap'>

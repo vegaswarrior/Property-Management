@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { insertProductSchema, updateProductSchema } from '../validators';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
+import { getOrCreateCurrentLandlord } from './landlord.actions';
 // Printful sync disabled: imports removed
 
 // Type for variant creation
@@ -266,7 +267,7 @@ export async function createProduct(data: z.infer<typeof insertProductSchema>) {
     
     // Extract only Product model fields, excluding sizeIds and colorIds (variant metadata)
     const { sizeIds, colorIds, ...productData } = product;
-    console.log('Color IDs:', colorIds); // Added this line to use colorIds
+    void colorIds; // suppress unused variable warning
     
     // create product and optionally create variants from provided sizeIds
     const created = await prisma.product.create({ data: productData });
@@ -287,13 +288,67 @@ export async function createProduct(data: z.infer<typeof insertProductSchema>) {
       }
     }
 
+    // Also create a Property and Unit record for the property management system
+    // This enables lease creation when applications are approved
+    const propertyType = product.category || 'apartment';
+    const unitCount = product.stock || 1;
+    
+    // Ensure there is a landlord workspace for this admin
+    const landlordResult = await getOrCreateCurrentLandlord();
+
+    if (!landlordResult.success) {
+      throw new Error(landlordResult.message || 'Unable to determine landlord');
+    }
+
+    const property = await prisma.property.create({
+      data: {
+        name: product.name,
+        slug: product.slug,
+        description: product.description,
+        address: {
+          street: product.streetAddress || '',
+          unit: product.unitNumber || '',
+        },
+        type: propertyType,
+        landlordId: landlordResult.landlord.id,
+      },
+    });
+
+    // Create units based on the stock/available units count
+    const unitsToCreate = [];
+    for (let i = 1; i <= unitCount; i++) {
+      unitsToCreate.push({
+        propertyId: property.id,
+        name: unitCount === 1 ? (product.unitNumber || 'Unit 1') : `Unit ${i}`,
+        type: propertyType,
+        bedrooms: product.bedrooms ? Number(product.bedrooms) : null,
+        bathrooms: product.bathrooms ? Number(product.bathrooms) : null,
+        sizeSqFt: product.sizeSqFt ? Number(product.sizeSqFt) : null,
+        rentAmount: Number(product.price),
+        isAvailable: true,
+        images: product.images || [],
+      });
+    }
+    
+    if (unitsToCreate.length > 0) {
+      await prisma.unit.createMany({ data: unitsToCreate });
+    }
+
     revalidatePath('/admin/products');
 
     return {
       success: true,
-      message: 'Product created successfully',
+      message: 'Property created successfully',
     };
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return {
+        success: false,
+        message:
+          'A property with this slug already exists. Please change the property name or slug before saving.',
+      };
+    }
+
     return { success: false, message: formatError(error) };
   }
 }
