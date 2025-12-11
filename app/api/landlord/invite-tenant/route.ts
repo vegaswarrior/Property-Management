@@ -13,12 +13,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json({ success: false, message: 'Invalid request body' }, { status: 400 });
+    }
+
     const { name, email, phone } = body as {
       name?: string;
       email?: string;
       phone?: string;
     };
+
+    // Validate email format if provided
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid email format' },
+        { status: 400 }
+      );
+    }
+
+    // Validate phone format if provided
+    if (phone && !/^(\+1|1)?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$/.test(phone)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid phone number format' },
+        { status: 400 }
+      );
+    }
 
     if (!email && !phone) {
       return NextResponse.json(
@@ -37,6 +57,14 @@ export async function POST(req: NextRequest) {
     }
 
     const landlord = landlordResult.landlord;
+
+    // Verify the user owns this landlord
+    if (landlord.ownerUserId !== session.user.id) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized - you do not own this landlord account' },
+        { status: 403 }
+      );
+    }
 
     const inviteByEmail = landlord.inviteViaEmail !== false;
     const inviteBySms = landlord.inviteViaSms === true;
@@ -104,7 +132,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (inviteBySms && phone) {
-      console.log('SMS invite requested for tenant', { phone, landlordId: landlord.id });
+      // SMS invite functionality - implement SMS service integration here
+      // For now, this is a placeholder
     }
 
     if (!emailSent && !(inviteBySms && phone)) {
@@ -119,7 +148,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'Tenant invite sent successfully.' });
   } catch (error) {
-    console.error('Error in invite-tenant API:', error);
+    // Log error without exposing sensitive details
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Error in invite-tenant API:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return NextResponse.json(
       { success: false, message: 'Something went wrong while sending the invite.' },
       { status: 500 }

@@ -41,21 +41,22 @@ const AdminUserPage = async (props: {
   const users = await getAllUsers({ page: Number(page), query: searchText });
 
   return (
-    <div className='space-y-2'>
-      <div className='flex items-center gap-3'>
-        <h1 className='h2-bold'>Users</h1>
-        {searchText && (
-          <div>
-            Filtered by <i>&quot;{searchText}&quot;</i>{' '}
-            <Link href='/admin/users'>
-              <Button variant='outline' size='sm'>
-                Remove Filter
-              </Button>
-            </Link>
-          </div>
-        )}
-      </div>
-      <div className='overflow-x-auto'>
+    <div className='w-full px-4 py-8 md:px-0 space-y-4'>
+      <div className='max-w-6xl mx-auto space-y-4'>
+        <div className='flex flex-col sm:flex-row sm:items-center gap-3'>
+          <h1 className='text-2xl md:text-3xl font-semibold text-slate-900'>Users</h1>
+          {searchText && (
+            <div className='text-sm text-slate-600'>
+              Filtered by <i>&quot;{searchText}&quot;</i>{' '}
+              <Link href='/admin/users'>
+                <Button variant='outline' size='sm'>
+                  Remove Filter
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+        <div className='overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0'>
         <Table>
           <TableHeader>
             <TableRow>
@@ -103,6 +104,7 @@ const AdminUserPage = async (props: {
             ))}
           </TableBody>
         </Table>
+        </div>
         {users.totalPages > 1 && (
           <Pagination page={Number(page) || 1} totalPages={users?.totalPages} />
         )}

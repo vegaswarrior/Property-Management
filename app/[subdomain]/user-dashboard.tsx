@@ -12,7 +12,10 @@ import {
   MapPin,
   User,
   Bell,
-  CreditCard
+  CreditCard,
+  FileSignature,
+  ReceiptText,
+  MessageCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { Landlord, Lease } from '@prisma/client';
@@ -174,6 +177,77 @@ export default function UserDashboard({ tenantLease, landlord }: UserDashboardPr
               </Link>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Mobile Navigation Cards - Show all sidebar links on mobile */}
+        <div className='md:hidden space-y-4'>
+          <h2 className='text-xl font-semibold text-white'>Navigation</h2>
+          <div className='grid gap-3'>
+            <Link
+              href='/user/profile'
+              className='rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm p-4 flex items-start gap-3 shadow-sm hover:bg-white/20 transition-colors cursor-pointer'
+            >
+              <div className='h-9 w-9 rounded-lg bg-white/20 text-white flex items-center justify-center shrink-0'>
+                <User className='h-4 w-4' />
+              </div>
+              <div className='flex flex-col gap-1'>
+                <span className='text-sm font-semibold text-white'>Profile</span>
+                <span className='text-xs text-slate-200'>Manage your personal details</span>
+              </div>
+            </Link>
+
+            <Link
+              href='/user/profile/application'
+              className='rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm p-4 flex items-start gap-3 shadow-sm hover:bg-white/20 transition-colors cursor-pointer'
+            >
+              <div className='h-9 w-9 rounded-lg bg-white/20 text-white flex items-center justify-center shrink-0'>
+                <FileText className='h-4 w-4' />
+              </div>
+              <div className='flex flex-col gap-1'>
+                <span className='text-sm font-semibold text-white'>Application</span>
+                <span className='text-xs text-slate-200'>View your rental application</span>
+              </div>
+            </Link>
+
+            <Link
+              href='/user/profile/lease'
+              className='rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm p-4 flex items-start gap-3 shadow-sm hover:bg-white/20 transition-colors cursor-pointer'
+            >
+              <div className='h-9 w-9 rounded-lg bg-white/20 text-white flex items-center justify-center shrink-0'>
+                <FileSignature className='h-4 w-4' />
+              </div>
+              <div className='flex flex-col gap-1'>
+                <span className='text-sm font-semibold text-white'>Lease</span>
+                <span className='text-xs text-slate-200'>Review lease documents</span>
+              </div>
+            </Link>
+
+            <Link
+              href='/user/profile/rent-receipts'
+              className='rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm p-4 flex items-start gap-3 shadow-sm hover:bg-white/20 transition-colors cursor-pointer'
+            >
+              <div className='h-9 w-9 rounded-lg bg-white/20 text-white flex items-center justify-center shrink-0'>
+                <ReceiptText className='h-4 w-4' />
+              </div>
+              <div className='flex flex-col gap-1'>
+                <span className='text-sm font-semibold text-white'>Rent Receipts</span>
+                <span className='text-xs text-slate-200'>Download payment receipts</span>
+              </div>
+            </Link>
+
+            <Link
+              href='/user/profile/ticket'
+              className='rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm p-4 flex items-start gap-3 shadow-sm hover:bg-white/20 transition-colors cursor-pointer'
+            >
+              <div className='h-9 w-9 rounded-lg bg-white/20 text-white flex items-center justify-center shrink-0'>
+                <MessageCircle className='h-4 w-4' />
+              </div>
+              <div className='flex flex-col gap-1'>
+                <span className='text-sm font-semibold text-white'>Create Ticket</span>
+                <span className='text-xs text-slate-200'>Submit a maintenance request</span>
+              </div>
+            </Link>
+          </div>
         </div>
 
         {/* Recent Activity */}

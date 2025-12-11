@@ -679,6 +679,7 @@ model RentalApplication {
   notes        String?
   adminResponse String?
   propertySlug  String?
+  encryptedSsn  String?  // Encrypted SSN - never store in plain text
   status       String   @default("pending") // pending, approved, rejected, withdrawn
   screeningProvider String?
   screeningBundle   String? // e.g. eviction_only, background_only, full_package

@@ -47,29 +47,31 @@ const AdminProductsPage = async (props: {
   });
 
   return (
-    <div className='space-y-4'>
-      <div className='flex-between'>
-        <div className='flex items-center gap-3'>
-          <h1 className='h2-bold'>Properties</h1>
-          {searchText && (
-            <div>
-              Filtered by <i>&quot;{searchText}&quot;</i>{' '}
-              <Link href='/admin/products'>
-                <Button variant='outline' size='sm'>
-                  Remove Filter
-                </Button>
-              </Link>
-            </div>
-          )}
+    <div className='w-full px-4 py-8 md:px-0 space-y-4'>
+      <div className='max-w-6xl mx-auto space-y-4'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+          <div className='flex flex-col sm:flex-row sm:items-center gap-3'>
+            <h1 className='text-2xl md:text-3xl font-semibold text-slate-900'>Properties</h1>
+            {searchText && (
+              <div className='text-sm text-slate-600'>
+                Filtered by <i>&quot;{searchText}&quot;</i>{' '}
+                <Link href='/admin/products'>
+                  <Button variant='outline' size='sm'>
+                    Remove Filter
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+          <div className='flex gap-2'>
+            <Button asChild variant='default' className='w-full sm:w-auto'>
+              <Link href='/admin/products/create'>Add Property</Link>
+            </Button>
+          </div>
         </div>
-        <div className='flex gap-2'>
-          <Button asChild variant='default'>
-            <Link href='/admin/products/create'>Add Property</Link>
-          </Button>
-        </div>
-      </div>
 
-      <Table>
+        <div className='overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0'>
+          <Table>
         <TableHeader>
           <TableRow>
             <TableHead>PHOTO</TableHead>
@@ -118,9 +120,11 @@ const AdminProductsPage = async (props: {
           ))}
         </TableBody>
       </Table>
-      {products.totalPages > 1 && (
-        <Pagination page={page} totalPages={products.totalPages} />
-      )}
+        </div>
+        {products.totalPages > 1 && (
+          <Pagination page={page} totalPages={products.totalPages} />
+        )}
+      </div>
     </div>
   );
 };

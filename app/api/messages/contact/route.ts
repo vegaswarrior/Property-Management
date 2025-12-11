@@ -48,8 +48,11 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error creating contact message:', error);
+    // Log error without exposing sensitive details
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Error creating contact message:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return NextResponse.json(
       { error: 'Failed to submit message. Please try again later.' },
       { status: 500 }

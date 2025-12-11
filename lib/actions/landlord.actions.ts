@@ -103,7 +103,11 @@ export async function updateCurrentLandlordSubdomain(formData: FormData) {
 
     return { success: true };
   } catch (error) {
-    console.error('Failed to update subdomain:', error);
+    // Log error in development only
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Failed to update subdomain:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return { success: false, message: error instanceof Error ? error.message : 'Failed to update subdomain' };
   }
 }
@@ -168,7 +172,11 @@ export async function uploadLandlordLogo(formData: FormData) {
 
     return { success: true, logoUrl };
   } catch (error) {
-    console.error('Failed to upload logo:', error);
+    // Log error in development only
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Failed to upload logo:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return { success: false, message: error instanceof Error ? error.message : 'Failed to upload logo' };
   }
 }
@@ -224,7 +232,11 @@ export async function updateCustomDomain(formData: FormData) {
 
     return { success: true };
   } catch (error) {
-    console.error('Failed to update custom domain:', error);
+    // Log error in development only
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Failed to update custom domain:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return { success: false, message: error instanceof Error ? error.message : 'Failed to update custom domain' };
   }
 }

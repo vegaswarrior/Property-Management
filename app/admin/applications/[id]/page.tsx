@@ -3,6 +3,7 @@ import { prisma } from '@/db/prisma';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { getDecryptedSsn, formatSsn } from '@/lib/utils/ssn-utils';
 
 interface AdminApplicationDetailPageProps {
   params: Promise<{ id: string }>;
@@ -39,6 +40,9 @@ export default async function AdminApplicationDetailPage({ params }: AdminApplic
   const unitName = application.unit?.name;
   const propertyName = application.unit?.property?.name;
   const unitLabel = propertyName && unitName ? `${propertyName} • ${unitName}` : propertyName || unitName || 'Unit';
+
+  // Decrypt SSN for admin viewing (only admins can access this)
+  const decryptedSsn = application.encryptedSsn ? await getDecryptedSsn(application.encryptedSsn) : null;
 
   const requestScreening = async (formData: FormData) => {
     'use server';
@@ -110,6 +114,12 @@ export default async function AdminApplicationDetailPage({ params }: AdminApplic
                 <div>
                   <span className='font-medium'>Employment: </span>
                   <span>{application.employmentStatus}</span>
+                </div>
+              )}
+              {decryptedSsn && (
+                <div>
+                  <span className='font-medium'>SSN: </span>
+                  <span className='font-mono text-xs'>{formatSsn(decryptedSsn)}</span>
                 </div>
               )}
               {application.moveInDate && (

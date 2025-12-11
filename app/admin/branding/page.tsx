@@ -1,7 +1,12 @@
 import { requireAdmin } from '@/lib/auth-guard';
-import { getOrCreateCurrentLandlord, updateCurrentLandlordSubdomain, uploadLandlordLogo, updateCustomDomain } from '@/lib/actions/landlord.actions';
+import { getOrCreateCurrentLandlord, uploadLandlordLogo, updateCustomDomain } from '@/lib/actions/landlord.actions';
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
+import { getRootDomainFromHost, getProtocol } from '@/lib/utils/domain-utils';
+import SubdomainForm from '@/components/admin/subdomain-form';
+import DomainSearch from '@/components/admin/domain-search';
+import { Image, Globe, Palette } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Branding & Domain',
@@ -17,16 +22,12 @@ const AdminBrandingPage = async () => {
   }
 
   const landlord = landlordResult.landlord;
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'yourdomain.com';
-  const isLocalhost = rootDomain.includes('localhost');
-
-  const handleSubdomainUpdate = async (formData: FormData) => {
-    'use server';
-    const result = await updateCurrentLandlordSubdomain(formData);
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to update subdomain');
-    }
-  };
+  
+  // Get root domain from request headers (works in production)
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+  const rootDomain = getRootDomainFromHost(host);
+  const protocol = getProtocol(host);
 
   const handleLogoUpload = async (formData: FormData) => {
     'use server';
@@ -34,6 +35,8 @@ const AdminBrandingPage = async () => {
     if (!result.success) {
       throw new Error(result.message || 'Failed to upload logo');
     }
+    // Redirect to refresh the page with new logo
+    redirect('/admin/branding');
   };
 
   const handleCustomDomainUpdate = async (formData: FormData) => {
@@ -42,26 +45,32 @@ const AdminBrandingPage = async () => {
     if (!result.success) {
       throw new Error(result.message || 'Failed to update custom domain');
     }
+    // Redirect to refresh the page
+    redirect('/admin/branding');
   };
 
   return (
-    <main className='w-full'>
-      <div className='max-w-4xl space-y-6'>
+    <main className='w-full px-4 py-8 md:px-0'>
+      <div className='max-w-6xl mx-auto space-y-8'>
         <div>
-          <h1 className='text-3xl md:text-4xl font-semibold text-slate-900 mb-1'>Branding & Domain</h1>
-          <p className='text-sm text-slate-600'>
+          <h1 className='text-3xl md:text-4xl font-semibold text-slate-900 mb-2'>Branding & Domain</h1>
+          <p className='text-sm text-slate-500'>
             Customize your public tenant portal with your logo, subdomain, and optional custom domain.
           </p>
         </div>
 
         {/* Logo Section */}
-        <section className='rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4'>
-          <div className='space-y-1'>
-            <h2 className='text-lg font-semibold text-slate-900'>Logo</h2>
-            <p className='text-sm text-slate-600'>
-              Upload your company logo to display on your public tenant portal. Recommended size: 200x200px.
-            </p>
+        <section className='rounded-xl border border-slate-200 bg-white p-4 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow'>
+          <div className='h-9 w-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0'>
+            <Image className='h-4 w-4' />
           </div>
+          <div className='flex-1 space-y-4'>
+            <div className='space-y-1'>
+              <h2 className='text-sm font-semibold text-slate-900'>Logo</h2>
+              <p className='text-xs text-slate-500'>
+                Upload your company logo to display on your public tenant portal. Recommended size: 200x200px.
+              </p>
+            </div>
 
           {landlord.logoUrl && (
             <div className='flex items-center gap-4'>
@@ -106,77 +115,55 @@ const AdminBrandingPage = async () => {
             </div>
           </form>
 
-          <p className='text-xs text-slate-500'>
-            We'll design a professional logo for your brand (1 revision included). Delivered within 3 business days.
-          </p>
+            <p className='text-xs text-slate-500'>
+              We'll design a professional logo for your brand (1 revision included). Delivered within 3 business days.
+            </p>
+          </div>
         </section>
 
         {/* Subdomain Section */}
-        <section className='rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4'>
-          <div className='space-y-1'>
-            <h2 className='text-lg font-semibold text-slate-900'>Subdomain</h2>
-            <p className='text-sm text-slate-600'>
-              Your free subdomain where tenants can view listings, apply, and pay rent online.
-            </p>
+        <section className='rounded-xl border border-slate-200 bg-white p-4 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow'>
+          <div className='h-9 w-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0'>
+            <Globe className='h-4 w-4' />
           </div>
-
-          <form action={handleSubdomainUpdate} className='space-y-3'>
-            <div>
-              <label className='block text-sm font-medium text-slate-700 mb-2'>Subdomain</label>
-              <div className='flex items-center gap-2'>
-                <input
-                  type='text'
-                  name='subdomain'
-                  defaultValue={landlord.subdomain}
-                  className='flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm'
-                  placeholder='your-company'
-                  required
-                  minLength={3}
-                  maxLength={50}
-                  pattern='[a-z0-9-]+'
-                />
-                <span className='text-sm text-slate-500'>.{rootDomain}</span>
-              </div>
-              <p className='text-xs text-slate-500 mt-1'>3-50 characters, letters, numbers, and hyphens only</p>
+          <div className='flex-1 space-y-4'>
+            <div className='space-y-1'>
+              <h2 className='text-sm font-semibold text-slate-900'>Subdomain</h2>
+              <p className='text-xs text-slate-500'>
+                Your free subdomain where tenants can view listings, apply, and pay rent online.
+              </p>
             </div>
 
+          <SubdomainForm currentSubdomain={landlord.subdomain} rootDomain={rootDomain} />
+
             {landlord.subdomain && (
-              <p className='text-sm text-slate-600'>
+              <p className='text-xs text-slate-600'>
                 Current URL:{' '}
                 <a
-                  href={
-                    isLocalhost
-                      ? `http://${landlord.subdomain}.${rootDomain}`
-                      : `https://${landlord.subdomain}.${rootDomain}`
-                  }
+                  href={`${protocol}://${landlord.subdomain}.${rootDomain}`}
                   target='_blank'
                   rel='noopener noreferrer'
                   className='font-mono text-emerald-700 hover:underline'
                 >
-                  {isLocalhost
-                    ? `http://${landlord.subdomain}.${rootDomain}`
-                    : `https://${landlord.subdomain}.${rootDomain}`}
+                  {`${protocol}://${landlord.subdomain}.${rootDomain}`}
                 </a>
               </p>
             )}
-
-            <button
-              type='submit'
-              className='inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-slate-800'
-            >
-              Save subdomain
-            </button>
-          </form>
+          </div>
         </section>
 
         {/* Custom Domain Section */}
-        <section className='rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4'>
-          <div className='space-y-1'>
-            <h2 className='text-lg font-semibold text-slate-900'>Custom Domain</h2>
-            <p className='text-sm text-slate-600'>
-              Use your own domain (e.g., www.yourcompany.com) for your tenant portal. We'll host it for 2 years free.
-            </p>
+        <section className='rounded-xl border border-slate-200 bg-white p-4 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow'>
+          <div className='h-9 w-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0'>
+            <Palette className='h-4 w-4' />
           </div>
+          <div className='flex-1 space-y-4'>
+            <div className='space-y-1'>
+              <h2 className='text-sm font-semibold text-slate-900'>Custom Domain</h2>
+              <p className='text-xs text-slate-500'>
+                Use your own domain (e.g., www.yourcompany.com) for your tenant portal. We'll host it for 2 years free.
+              </p>
+            </div>
 
           {landlord.customDomain ? (
             <div className='space-y-3'>
@@ -185,31 +172,13 @@ const AdminBrandingPage = async () => {
                 <p className='text-lg font-semibold text-emerald-800 mt-1'>{landlord.customDomain}</p>
                 <p className='text-xs text-emerald-700 mt-2'>Hosting included until Dec 2026</p>
               </div>
-              <form action={handleCustomDomainUpdate} className='space-y-3'>
-                <button
-                  type='button'
-                  className='inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50'
-                  onClick={() => {
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.name = 'customDomain';
-                    input.placeholder = 'www.yourcompany.com';
-                    input.className = 'w-full rounded-md border border-slate-300 px-3 py-2 text-sm mb-3';
-                    input.pattern = '^[a-z0-9-]+(\\.[a-z0-9-]+)+$';
-                    const form = document.querySelector('form[action="[object Object]"]');
-                    if (form) form.appendChild(input);
-                  }}
-                >
-                  Change custom domain
-                </button>
-              </form>
             </div>
           ) : (
             <div className='space-y-4'>
               <div className='rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2'>
                 <p className='text-sm font-semibold text-slate-900'>Premium feature</p>
                 <p className='text-sm text-slate-600'>
-                  Purchase and use your own domain for $199/year. We handle DNS setup and provide 2 years of free hosting.
+                  Search and purchase your own domain. We handle DNS setup and provide 2 years of free hosting.
                 </p>
                 <ul className='text-xs text-slate-600 space-y-1 mt-2'>
                   <li>• Full DNS and SSL setup included</li>
@@ -219,27 +188,10 @@ const AdminBrandingPage = async () => {
                 </ul>
               </div>
 
-              <form action={handleCustomDomainUpdate} className='space-y-3'>
-                <div>
-                  <input
-                    type='text'
-                    name='customDomain'
-                    placeholder='www.yourcompany.com'
-                    className='w-full rounded-md border border-slate-300 px-3 py-2 text-sm mb-3'
-                    pattern='^[a-z0-9-]+(\\.[a-z0-9-]+)+$'
-                    required
-                  />
-                  <p className='text-xs text-slate-500'>Enter your desired domain name</p>
-                </div>
-                <button
-                  type='submit'
-                  className='inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-500'
-                >
-                  Purchase custom domain ($199/year)
-                </button>
-              </form>
+              <DomainSearch />
             </div>
           )}
+          </div>
         </section>
       </div>
     </main>

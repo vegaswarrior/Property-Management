@@ -18,7 +18,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ messages: threads });
   } catch (error) {
-    console.error('Failed to fetch messages:', error);
+    // Log error without exposing sensitive details
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Failed to fetch messages:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -45,9 +49,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify sender permissions (simplified - in production you'd check landlord/tenant relationships)
+    // Verify sender permissions - check landlord/tenant relationships
     if (landlordId) {
-      // Verify sender is associated with this landlord
+      // Verify sender is associated with this landlord (owner or tenant)
       const landlord = await prisma.landlord.findFirst({
         where: {
           id: landlordId,
@@ -61,6 +65,7 @@ export async function POST(request: NextRequest) {
                       leases: {
                         some: {
                           tenantId: session.user.id,
+                          status: 'active',
                         },
                       },
                     },
@@ -73,8 +78,17 @@ export async function POST(request: NextRequest) {
       });
 
       if (!landlord) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        return NextResponse.json({ error: 'Forbidden - not associated with this landlord' }, { status: 403 });
       }
+    }
+
+    // Verify recipient exists and is accessible
+    const recipient = await prisma.user.findUnique({
+      where: { id: recipientId },
+    });
+
+    if (!recipient) {
+      return NextResponse.json({ error: 'Recipient not found' }, { status: 404 });
     }
 
     const { message, thread } = await NotificationService.createMessage(
@@ -87,7 +101,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message, thread });
   } catch (error) {
-    console.error('Failed to send message:', error);
+    // Log error without exposing sensitive details
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Failed to send message:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

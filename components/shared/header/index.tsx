@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import Menu from "./menu";
-import CategoryDrawer from './category-drawer';
+// import CategoryDrawer from './category-drawer';
 import { getCategoryTree } from '@/lib/actions/product.actions';
 import { prisma } from '@/db/prisma';
 import { headers } from 'next/headers';
@@ -45,17 +45,17 @@ const Header = async () => {
     <header className="w-full bg-transparent border-b border-slate-200 text-white">
       {/* Mobile header: hamburger left, logo centered, menu (three dots) right */}
       <div className="wrapper flex items-center justify-between md:hidden">
-        <div className="flex items-center">
+        {/* <div className="flex items-center">
           <CategoryDrawer />
-        </div>
+        </div> */}
 
         <Link href='/' className="flex items-center justify-center">
           <div className="relative w-28 h-16">
             <Image
-              src='/images/2.svg'
+              src={landlord?.logoUrl || '/images/logo.svg'}
               fill
               className="object-contain"
-              alt="Property Management Logo"
+              alt={`${displayName} Logo`}
               priority={true}
             />
           </div>
@@ -70,7 +70,7 @@ const Header = async () => {
       <div className="wrapper hidden md:flex items-center justify-between">
         <div className="flex items-center">
           <Link href='/' className="flex items-center">
-            <CategoryDrawer />
+            {/* <CategoryDrawer /> */}
             <div className="relative w-36 h-36">
               <Image 
                 src={landlord?.logoUrl || '/images/logo.svg'}

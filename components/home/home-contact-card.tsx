@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { MessageSquare, Mail, Clock, ArrowRight } from 'lucide-react';
 
 const HomeContactCard = () => {
   const [name, setName] = useState('');
@@ -34,7 +36,7 @@ const HomeContactCard = () => {
         throw new Error(data?.error || 'Failed to send message');
       }
 
-      setSuccess('Message sent!');
+      setSuccess('Message sent! We\'ll get back to you within 24 hours.');
       setName('');
       setEmail('');
       setMessage('');
@@ -50,95 +52,126 @@ const HomeContactCard = () => {
   };
 
   return (
-    <section className="my-16 bg-white">
-      <div className="container mx-auto max-w-4xl px-4 md:px-6">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 md:p-6 grid gap-6 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start">
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <h2 className="text-xl md:text-2xl font-semibold text-slate-900">Have a question?</h2>
-            <p className="text-xs md:text-sm text-slate-600">
-              Drop a quick note and I&apos;ll get back to you. For project-level details, use the full contact page.
-            </p>
+    <section className="w-full py-16 md:py-20 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="rounded-3xl border border-white/10 bg-slate-950/60 backdrop-blur-md p-8 md:p-10 grid gap-8 md:grid-cols-[1.4fr_1fr]">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-white">
+                Have Questions? We're Here to Help
+              </h2>
+              <p className="text-slate-300 text-sm md:text-base">
+                Whether you're wondering about features, need setup help, or just want to chat about property management, we'd love to hear from you.
+              </p>
+            </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full rounded-lg border border-white/10 bg-slate-900/50 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-emerald-500/50 focus:bg-slate-900/70 transition-colors"
+                    placeholder="Your name"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded-lg border border-white/10 bg-slate-900/50 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-emerald-500/50 focus:bg-slate-900/70 transition-colors"
+                    placeholder="you@example.com"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1">
-                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
-                  Name
+                <label className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                  Message
                 </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500"
-                  placeholder="Your name"
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={4}
+                  className="w-full rounded-lg border border-white/10 bg-slate-900/50 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-emerald-500/50 focus:bg-slate-900/70 transition-colors resize-none"
+                  placeholder="How can we help you?"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none focus:border-violet-400/80"
-                  placeholder="you@example.com"
-                />
+              <div className="flex items-center gap-4">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="inline-flex items-center justify-center rounded-full bg-emerald-500 text-slate-950 px-6 py-2.5 text-sm font-bold hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105"
+                >
+                  {isSubmitting ? 'Sending...' : 'Send Message'}
+                  {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
+                </button>
+                <Link
+                  href="/contact"
+                  className="text-sm text-emerald-300 hover:text-emerald-200 underline transition-colors"
+                >
+                  Go to full contact page
+                </Link>
+              </div>
+
+              {error && (
+                <div className="rounded-lg bg-red-500/20 border border-red-500/30 px-4 py-2 text-sm text-red-300">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="rounded-lg bg-emerald-500/20 border border-emerald-500/30 px-4 py-2 text-sm text-emerald-300">
+                  {success}
+                </div>
+              )}
+            </form>
+          </div>
+
+          <aside className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="font-bold text-lg text-white">Quick Info</h3>
+              
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-900/50 border border-white/10">
+                  <Clock className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-white text-sm">Response Time</div>
+                    <div className="text-xs text-slate-400">Usually within 24 hours</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-900/50 border border-white/10">
+                  <Mail className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-white text-sm">Email Support</div>
+                    <div className="text-xs text-slate-400 break-all">support@rooms4rentlv.com</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-900/50 border border-white/10">
+                  <MessageSquare className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-white text-sm">Live Chat</div>
+                    <div className="text-xs text-slate-400">Available in your dashboard</div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
-                Message
-              </label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={3}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 resize-none"
-                placeholder="How can I help?"
-              />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? 'Sending...' : 'Send'}
-              </button>
-              <a
-                href="/contact"
-                className="text-xs md:text-sm text-emerald-700 hover:text-emerald-600 underline"
-              >
-                Go to full contact page
-              </a>
-            </div>
-
-            {error && (
-              <p className="text-xs text-red-600">{error}</p>
-            )}
-            {success && (
-              <p className="text-xs text-emerald-700">{success}</p>
-            )}
-          </form>
-
-          <aside className="space-y-2 text-xs md:text-sm text-slate-600">
-            <p className="font-semibold text-sm md:text-base text-slate-900">Quick Connect</p>
-            <p>
-              Whether it&apos;s a sizing question, an order concern, or an idea for a new design, this inbox is always
-              open.
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-[11px] md:text-xs">
-              <div className="rounded-lg border border-slate-200 bg-white p-2">
-                <p className="font-semibold text-slate-900">Reply Time</p>
-                <p className="text-slate-600">Usually within 24 hours</p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-2">
-                <p className="font-semibold text-slate-900">Email</p>
-                <p className="text-slate-600 break-all">contact@rockenmyvibe.com</p>
-              </div>
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+              <p className="text-xs text-emerald-200 leading-relaxed">
+                <span className="font-semibold">Pro Tip:</span> Most questions are answered in our help center. Check it out before reaching out!
+              </p>
             </div>
           </aside>
         </div>

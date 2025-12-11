@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Landlord } from '@prisma/client';
+import { adminNavLinks } from '@/lib/constants/admin-nav';
 
 interface AdminDashboardProps {
   landlord: Landlord;
@@ -54,7 +55,8 @@ export default function AdminDashboard({ landlord }: AdminDashboardProps) {
 
         {/* Key Metrics */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
-          <Card>
+          <Link href='/admin/products'>
+          <Card className='cursor-pointer hover:bg-white/5 transition-colors'>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-base font-medium text-white'>Total Properties</CardTitle>
               <Building2 className='h-5 w-5 text-emerald-300' />
@@ -67,8 +69,10 @@ export default function AdminDashboard({ landlord }: AdminDashboardProps) {
               </p>
             </CardContent>
           </Card>
+          </Link>
 
-          <Card>
+          <Link href='/admin/revenue'>
+          <Card className='cursor-pointer hover:bg-white/5 transition-colors'>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-base font-medium text-white'>Occupancy Rate</CardTitle>
               <Home className='h-5 w-5 text-emerald-300' />
@@ -80,8 +84,10 @@ export default function AdminDashboard({ landlord }: AdminDashboardProps) {
               </p>
             </CardContent>
           </Card>
+          </Link>
 
-          <Card>
+          <Link href='/admin/tenants'>
+          <Card className='cursor-pointer hover:bg-white/5 transition-colors'>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-lg font-medium text-white'>Total Tenants</CardTitle>
               <Users className='h-5 w-5 text-emerald-300' />
@@ -94,8 +100,10 @@ export default function AdminDashboard({ landlord }: AdminDashboardProps) {
               </p>
             </CardContent>
           </Card>
+          </Link>
 
-          <Card>
+          <Link href='/admin/revenue'>
+          <Card className='cursor-pointer hover:bg-white/5 transition-colors'>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-lg font-medium text-white'>Monthly Revenue</CardTitle>
               <DollarSign className='h-5 w-5 text-emerald-300' />
@@ -108,6 +116,7 @@ export default function AdminDashboard({ landlord }: AdminDashboardProps) {
               </p>
             </CardContent>
           </Card>
+          </Link>
         </div>
 
         {/* Quick Actions */}
@@ -219,6 +228,28 @@ export default function AdminDashboard({ landlord }: AdminDashboardProps) {
               </Link>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Navigation Cards */}
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+          {adminNavLinks.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href}>
+                <Card className='cursor-pointer hover:bg-white/5 transition-colors h-full'>
+                  <CardHeader>
+                    <CardTitle className='flex items-center gap-2 text-white'>
+                      <Icon className='h-5 w-5 text-emerald-300' />
+                      {item.title}
+                    </CardTitle>
+                    <CardDescription className='text-slate-200'>
+                      {item.description}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </main>

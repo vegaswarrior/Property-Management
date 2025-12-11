@@ -245,7 +245,8 @@ export default async function RentManagementPage() {
         <section className='space-y-3'>
           <h2 className='text-sm font-semibold text-slate-800'>Paid this month</h2>
           <div className='rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden'>
-            <table className='min-w-full text-sm'>
+            <div className='overflow-x-auto'>
+              <table className='min-w-full text-sm'>
               <thead className='bg-slate-50'>
                 <tr>
                   <th className='px-4 py-2 text-left font-medium text-slate-500'>Tenant</th>
@@ -285,13 +286,15 @@ export default async function RentManagementPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </section>
 
         <section className='space-y-3'>
           <h2 className='text-sm font-semibold text-red-700'>Late this month</h2>
           <div className='rounded-xl border border-red-200 bg-red-50 shadow-sm overflow-hidden'>
-            <table className='min-w-full text-sm'>
+            <div className='overflow-x-auto'>
+              <table className='min-w-full text-sm'>
               <thead className='bg-red-100'>
                 <tr>
                   <th className='px-4 py-2 text-left font-medium text-red-800'>Tenant</th>
@@ -355,13 +358,15 @@ export default async function RentManagementPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </section>
 
         <section className='space-y-3'>
           <h2 className='text-sm font-semibold text-amber-800'>Partial payments</h2>
           <div className='rounded-xl border border-amber-200 bg-amber-50 shadow-sm overflow-hidden'>
-            <table className='min-w-full text-sm'>
+            <div className='overflow-x-auto'>
+              <table className='min-w-full text-sm'>
               <thead className='bg-amber-100'>
                 <tr>
                   <th className='px-4 py-2 text-left font-medium text-amber-800'>Tenant</th>
@@ -411,6 +416,7 @@ export default async function RentManagementPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         </section>
       </div>

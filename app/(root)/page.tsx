@@ -6,14 +6,28 @@ import { prisma } from '@/db/prisma';
 import Link from 'next/link';
 import Image from 'next/image';
 import { formatCurrency } from '@/lib/utils';
+import {
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  FileText,
+  MessageSquare,
+  Wrench,
+  Building2,
+  Users,
+  CreditCard,
+  Calendar,
+  Shield,
+  Zap,
+  TrendingUp,
+  ArrowRight,
+  Sparkles,
+} from 'lucide-react';
 
 async function getLandlordForRequest() {
   const headersList = await headers();
   const host = headersList.get('host') || '';
   const rawApex = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
-
-  console.log('[Subdomain Detection] Host:', host);
-  console.log('[Subdomain Detection] NEXT_PUBLIC_ROOT_DOMAIN:', rawApex);
 
   const bareHost = host.split(':')[0].toLowerCase();
   let subdomain: string | null = null;
@@ -21,39 +35,26 @@ async function getLandlordForRequest() {
   if (rawApex) {
     let apex = rawApex.trim().toLowerCase();
 
-    // Strip protocol if present
     if (apex.startsWith('http://')) apex = apex.slice(7);
     if (apex.startsWith('https://')) apex = apex.slice(8);
-
-    // Remove any trailing slash
     if (apex.endsWith('/')) apex = apex.slice(0, -1);
 
-    // Also strip port from apex for comparison
     const apexBase = apex.split(':')[0];
-
-    console.log('[Subdomain Detection] bareHost:', bareHost);
-    console.log('[Subdomain Detection] apexBase:', apexBase);
 
     if (bareHost !== apexBase && bareHost.endsWith(`.${apexBase}`)) {
       subdomain = bareHost.slice(0, bareHost.length - apexBase.length - 1);
-      console.log('[Subdomain Detection] Extracted subdomain (from apex):', subdomain);
     }
   }
 
-  // Localhost/dev fallback: treat *.localhost as subdomains
   if (!subdomain && bareHost.endsWith('.localhost')) {
     subdomain = bareHost.slice(0, bareHost.length - '.localhost'.length);
-    console.log('[Subdomain Detection] Extracted subdomain (localhost fallback):', subdomain);
   }
 
   if (!subdomain) {
-    console.log('[Subdomain Detection] No subdomain detected, showing main homepage');
     return null;
   }
 
-  console.log('[Subdomain Detection] Looking up landlord with subdomain:', subdomain);
   const landlord = await prisma.landlord.findUnique({ where: { subdomain } });
-  console.log('[Subdomain Detection] Landlord found:', landlord ? landlord.name : 'null');
   return landlord;
 }
 
@@ -143,7 +144,7 @@ const Homepage = async () => {
                         <div className='mt-4 flex gap-2'>
                           <Link
                             href={`/${property.slug}/apply`}
-                            className='inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-1.5 text-[11px] font-medium text-slate-950 hover:bg-emerald-400 flex-1'
+                            className='inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-1.5 text-[11px] font-medium text-slate-950 hover:bg-emerald-400 flex-1 transition-colors'
                           >
                             Start application
                           </Link>
@@ -163,268 +164,554 @@ const Homepage = async () => {
   return (
     <>
       <main className='flex-1 w-full'>
-        {/* Hero: speak directly to landlords */}
-        <section className='w-full pt-16 pb-20 px-4'>
-          <div className='max-w-6xl mx-auto grid gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-center bg-translucent rounded-3xl p-6 md:p-10 text-slate-50'>
-            <div className='space-y-6'>
-              <div className='inline-flex items-center gap-2 rounded-full bg-slate-900/60 px-3 py-1 text-emerald-300 text-[11px] font-medium border border-emerald-300/60'>
-                <span className='h-1.5 w-1.5 rounded-full bg-emerald-500' />
-                <span>Built for independent landlords & small property managers</span>
-              </div>
-              <h1 className='text-3xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-tight text-white'>
-                Property management software that grows with your units.
-              </h1>
-              <p className='text-sm md:text-base text-slate-100/85 max-w-xl'>
-                {APP_NAME} gives you everything in one place: properties, tenants, leases, online rent
-                payments, and maintenance—designed for landlords with 1 to 200+ units.
-              </p>
-              <div className='flex flex-wrap items-center gap-3'>
-                <a
-                  href='/(auth)/sign-up'
-                  className='inline-flex items-center justify-center rounded-full bg-emerald-400 text-slate-950 px-5 py-2.5 text-sm font-semibold shadow-sm hover:bg-emerald-300 transition'
-                >
-                  Get started free
-                </a>
-                <a
-                  href='#how-it-works'
-                  className='inline-flex items-center justify-center rounded-full border border-white/30 text-slate-50 px-4 py-2 text-xs font-medium hover:bg-white/10 transition'
-                >
-                  See how it works
-                </a>
-              </div>
-              <div className='flex flex-wrap items-center gap-4 text-[11px] text-slate-200/90'>
-                <span>Stripe-powered rent payments directly to your account</span>
-                <span className='hidden xs:inline text-slate-400'>•</span>
-                <span className='hidden xs:inline'>Leases signed securely with e-signatures</span>
-              </div>
-            </div>
-            <div className='relative h-64 md:h-80 rounded-2xl bg-slate-950/40 border border-white/15 shadow-lg overflow-hidden p-5 flex flex-col justify-between backdrop-blur-md'>
-              <div className='space-y-3'>
-                <div className='flex items-center justify-between text-xs text-slate-200'>
-                  <span className='font-semibold'>Portfolio snapshot</span>
-                  <span className='text-[10px] text-emerald-300'>Live demo</span>
+        {/* Hero Section - Conversion Focused */}
+        <section className='w-full pt-12 pb-16 md:pt-20 md:pb-24 px-4 relative overflow-hidden'>
+          <div className='absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-blue-500/10 animate-pulse' />
+          <div className='max-w-7xl mx-auto relative z-10'>
+            <div className='grid gap-8 lg:grid-cols-2 items-center'>
+              <div className='space-y-6 animate-in fade-in slide-in-from-left duration-700'>
+                <div className='inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-4 py-1.5 text-emerald-300 text-xs font-medium border border-emerald-500/30 backdrop-blur-sm'>
+                  <Sparkles className='h-3 w-3' />
+                  <span>100% Free Forever • No Credit Card Required</span>
                 </div>
-                <div className='grid grid-cols-3 gap-3 text-[11px]'>
-                  <div className='rounded-xl bg-slate-900/70 border border-white/10 p-3 space-y-1'>
-                    <div className='text-slate-300'>Units</div>
-                    <div className='text-lg font-semibold text-white'>18</div>
-                    <div className='text-[10px] text-emerald-300'>3 vacant, 15 occupied</div>
+                
+                <h1 className='text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight text-white'>
+                  Stop Chasing Rent. Start Growing Your Portfolio.
+                </h1>
+                
+                <p className='text-base md:text-lg text-slate-200 max-w-xl leading-relaxed'>
+                  Tired of late payments, maintenance chaos, and spreadsheet nightmares? Join thousands of small landlords who manage everything—rent collection, leases, maintenance, and tenant communication—all in one place. <span className='text-emerald-300 font-semibold'>Completely free.</span>
+                </p>
+                
+                <div className='flex flex-wrap items-center gap-4'>
+                  <Link
+                    href='/sign-up'
+                    className='group inline-flex items-center justify-center rounded-full bg-emerald-500 text-slate-950 px-8 py-3.5 text-base font-bold shadow-lg hover:bg-emerald-400 transition-all duration-300 hover:scale-105 hover:shadow-emerald-500/50'
+                  >
+                    Start Free Today
+                    <ArrowRight className='ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform' />
+                  </Link>
+                  <Link
+                    href='#how-it-works'
+                    className='inline-flex items-center justify-center rounded-full border-2 border-white/30 text-white px-6 py-3.5 text-sm font-semibold hover:bg-white/10 hover:border-white/50 transition-all duration-300'
+                  >
+                    See How It Works
+                  </Link>
+                </div>
+                
+                <div className='flex flex-wrap items-center gap-6 pt-4 text-sm text-slate-300'>
+                  <div className='flex items-center gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400' />
+                    <span>No setup fees</span>
                   </div>
-                  <div className='rounded-xl bg-slate-900/70 border border-white/10 p-3 space-y-1'>
-                    <div className='text-slate-300'>This month&apos;s rent</div>
-                    <div className='text-lg font-semibold text-white'>$24,750</div>
-                    <div className='text-[10px] text-emerald-300'>96% collected</div>
+                  <div className='flex items-center gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400' />
+                    <span>Up to 24 units free</span>
                   </div>
-                  <div className='rounded-xl bg-slate-900/70 border border-white/10 p-3 space-y-1'>
-                    <div className='text-slate-300'>Tickets</div>
-                    <div className='text-lg font-semibold text-white'>4</div>
-                    <div className='text-[10px] text-amber-300'>2 urgent, 2 scheduled</div>
+                  <div className='flex items-center gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400' />
+                    <span>Cancel anytime</span>
                   </div>
                 </div>
               </div>
-              <div className='space-y-2 text-[11px]'>
-                <div className='flex items-center justify-between text-slate-200'>
-                  <span className='font-medium'>Onboarding checklist</span>
-                  <span className='text-emerald-300'>3 of 4 complete</span>
+              
+              <div className='relative h-[500px] lg:h-[600px] rounded-3xl bg-slate-950/60 border border-white/10 shadow-2xl overflow-hidden backdrop-blur-md animate-in fade-in slide-in-from-right duration-700 delay-200'>
+                <div className='absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5' />
+                <div className='relative h-full p-6 flex flex-col justify-between'>
+                  <div className='space-y-4'>
+                    <div className='flex items-center justify-between'>
+                      <h3 className='text-lg font-bold text-white'>Your Dashboard</h3>
+                      <span className='text-xs text-emerald-300 bg-emerald-500/20 px-2 py-1 rounded-full'>Live Demo</span>
+                    </div>
+                    <div className='grid grid-cols-2 gap-3'>
+                      <div className='rounded-xl bg-slate-900/80 border border-white/10 p-4 space-y-2 backdrop-blur-sm hover:border-emerald-500/30 transition-colors'>
+                        <div className='text-xs text-slate-400'>Total Units</div>
+                        <div className='text-2xl font-bold text-white'>24</div>
+                        <div className='text-[10px] text-emerald-300'>3 vacant</div>
+                      </div>
+                      <div className='rounded-xl bg-slate-900/80 border border-white/10 p-4 space-y-2 backdrop-blur-sm hover:border-emerald-500/30 transition-colors'>
+                        <div className='text-xs text-slate-400'>This Month</div>
+                        <div className='text-2xl font-bold text-white'>$28,500</div>
+                        <div className='text-[10px] text-emerald-300'>98% collected</div>
+                      </div>
+                      <div className='rounded-xl bg-slate-900/80 border border-white/10 p-4 space-y-2 backdrop-blur-sm hover:border-emerald-500/30 transition-colors'>
+                        <div className='text-xs text-slate-400'>Maintenance</div>
+                        <div className='text-2xl font-bold text-white'>2</div>
+                        <div className='text-[10px] text-amber-300'>1 urgent</div>
+                      </div>
+                      <div className='rounded-xl bg-slate-900/80 border border-white/10 p-4 space-y-2 backdrop-blur-sm hover:border-emerald-500/30 transition-colors'>
+                        <div className='text-xs text-slate-400'>Applications</div>
+                        <div className='text-2xl font-bold text-white'>5</div>
+                        <div className='text-[10px] text-blue-300'>3 pending</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className='space-y-3 bg-slate-900/60 rounded-xl p-4 border border-white/10'>
+                    <div className='flex items-center justify-between text-sm'>
+                      <span className='font-semibold text-white'>Quick Actions</span>
+                    </div>
+                    <div className='grid grid-cols-2 gap-2'>
+                      <button className='text-xs bg-emerald-500/20 text-emerald-300 px-3 py-2 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors'>
+                        Collect Rent
+                      </button>
+                      <button className='text-xs bg-blue-500/20 text-blue-300 px-3 py-2 rounded-lg border border-blue-500/30 hover:bg-blue-500/30 transition-colors'>
+                        New Lease
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <ol className='space-y-1'>
-                  <li className='flex items-center gap-2'>
-                    <span className='h-4 w-4 rounded-full bg-emerald-400 flex items-center justify-center text-[9px] font-bold text-slate-950'>✓</span>
-                    <span>Add your first property</span>
-                  </li>
-                  <li className='flex items-center gap-2'>
-                    <span className='h-4 w-4 rounded-full bg-emerald-500 flex items-center justify-center text-[9px] font-bold text-slate-950'>✓</span>
-                    <span>Invite a tenant</span>
-                  </li>
-                  <li className='flex items-center gap-2'>
-                    <span className='h-4 w-4 rounded-full bg-emerald-500 flex items-center justify-center text-[9px] font-bold text-slate-950'>✓</span>
-                    <span>Send lease for e-signature</span>
-                  </li>
-                  <li className='flex items-center gap-2'>
-                    <span className='h-4 w-4 rounded-full border border-emerald-300/80 text-[9px] font-bold text-emerald-200 flex items-center justify-center'>4</span>
-                    <span>Connect payouts with Stripe</span>
-                  </li>
-                </ol>
               </div>
             </div>
           </div>
         </section>
 
-        {/* How it works: simple 4-step flow */}
+        {/* Pain Points → Solutions */}
+        <section className='w-full py-16 md:py-20 px-4 bg-gradient-to-b from-transparent to-slate-900/30'>
+          <div className='max-w-6xl mx-auto space-y-12'>
+            <div className='text-center space-y-3 animate-in fade-in duration-700'>
+              <h2 className='text-3xl md:text-4xl font-bold text-white'>
+                We Get It. Property Management is Exhausting.
+              </h2>
+              <p className='text-lg text-slate-300 max-w-2xl mx-auto'>
+                You didn't become a landlord to spend hours on admin work. Here's how we solve your biggest headaches.
+              </p>
+            </div>
+
+            <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
+              {/* Pain Point 1 */}
+              <div className='group rounded-2xl border border-red-500/20 bg-slate-950/60 p-6 space-y-4 hover:border-red-500/40 hover:bg-slate-950/80 transition-all duration-300 animate-in fade-in slide-in-from-bottom'>
+                <div className='flex items-start gap-4'>
+                  <div className='rounded-xl bg-red-500/20 p-3 border border-red-500/30'>
+                    <Clock className='h-6 w-6 text-red-400' />
+                  </div>
+                  <div className='flex-1'>
+                    <h3 className='text-lg font-bold text-white mb-2'>Late Rent Every Month</h3>
+                    <p className='text-sm text-slate-400 mb-3'>
+                      Chasing tenants for payments, sending reminders, tracking who paid what...
+                    </p>
+                    <div className='flex items-center gap-2 text-emerald-300 text-sm font-semibold'>
+                      <ArrowRight className='h-4 w-4' />
+                      <span>Solution: Automated online payments with Stripe</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pain Point 2 */}
+              <div className='group rounded-2xl border border-amber-500/20 bg-slate-950/60 p-6 space-y-4 hover:border-amber-500/40 hover:bg-slate-950/80 transition-all duration-300 animate-in fade-in slide-in-from-bottom delay-100'>
+                <div className='flex items-start gap-4'>
+                  <div className='rounded-xl bg-amber-500/20 p-3 border border-amber-500/30'>
+                    <MessageSquare className='h-6 w-6 text-amber-400' />
+                  </div>
+                  <div className='flex-1'>
+                    <h3 className='text-lg font-bold text-white mb-2'>Maintenance Request Chaos</h3>
+                    <p className='text-sm text-slate-400 mb-3'>
+                      Texts, calls, emails scattered everywhere. No way to track what's urgent.
+                    </p>
+                    <div className='flex items-center gap-2 text-emerald-300 text-sm font-semibold'>
+                      <ArrowRight className='h-4 w-4' />
+                      <span>Solution: Centralized ticket system with priority tracking</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pain Point 3 */}
+              <div className='group rounded-2xl border border-blue-500/20 bg-slate-950/60 p-6 space-y-4 hover:border-blue-500/40 hover:bg-slate-950/80 transition-all duration-300 animate-in fade-in slide-in-from-bottom delay-200'>
+                <div className='flex items-start gap-4'>
+                  <div className='rounded-xl bg-blue-500/20 p-3 border border-blue-500/30'>
+                    <FileText className='h-6 w-6 text-blue-400' />
+                  </div>
+                  <div className='flex-1'>
+                    <h3 className='text-lg font-bold text-white mb-2'>Spreadsheet Nightmare</h3>
+                    <p className='text-sm text-slate-400 mb-3'>
+                      Properties, tenants, leases, payments—all in different files that never sync.
+                    </p>
+                    <div className='flex items-center gap-2 text-emerald-300 text-sm font-semibold'>
+                      <ArrowRight className='h-4 w-4' />
+                      <span>Solution: Everything in one organized dashboard</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pain Point 4 */}
+              <div className='group rounded-2xl border border-purple-500/20 bg-slate-950/60 p-6 space-y-4 hover:border-purple-500/40 hover:bg-slate-950/80 transition-all duration-300 animate-in fade-in slide-in-from-bottom delay-300'>
+                <div className='flex items-start gap-4'>
+                  <div className='rounded-xl bg-purple-500/20 p-3 border border-purple-500/30'>
+                    <Users className='h-6 w-6 text-purple-400' />
+                  </div>
+                  <div className='flex-1'>
+                    <h3 className='text-lg font-bold text-white mb-2'>Application Management Chaos</h3>
+                    <p className='text-sm text-slate-400 mb-3'>
+                      Paper applications, lost emails, no way to track who applied when or compare applicants side-by-side.
+                    </p>
+                    <div className='flex items-center gap-2 text-emerald-300 text-sm font-semibold'>
+                      <ArrowRight className='h-4 w-4' />
+                      <span>Solution: Digital applications with organized approval workflow</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pain Point 5 */}
+              <div className='group rounded-2xl border border-cyan-500/20 bg-slate-950/60 p-6 space-y-4 hover:border-cyan-500/40 hover:bg-slate-950/80 transition-all duration-300 animate-in fade-in slide-in-from-bottom delay-400'>
+                <div className='flex items-start gap-4'>
+                  <div className='rounded-xl bg-cyan-500/20 p-3 border border-cyan-500/30'>
+                    <FileText className='h-6 w-6 text-cyan-400' />
+                  </div>
+                  <div className='flex-1'>
+                    <h3 className='text-lg font-bold text-white mb-2'>Lease Management Mess</h3>
+                    <p className='text-sm text-slate-400 mb-3'>
+                      Printing, signing, scanning, storing leases. Renewals slip through the cracks.
+                    </p>
+                    <div className='flex items-center gap-2 text-emerald-300 text-sm font-semibold'>
+                      <ArrowRight className='h-4 w-4' />
+                      <span>Solution: Digital leases with e-signatures & auto-renewal reminders</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pain Point 6 */}
+              <div className='group rounded-2xl border border-pink-500/20 bg-slate-950/60 p-6 space-y-4 hover:border-pink-500/40 hover:bg-slate-950/80 transition-all duration-300 animate-in fade-in slide-in-from-bottom delay-500'>
+                <div className='flex items-start gap-4'>
+                  <div className='rounded-xl bg-pink-500/20 p-3 border border-pink-500/30'>
+                    <DollarSign className='h-6 w-6 text-pink-400' />
+                  </div>
+                  <div className='flex-1'>
+                    <h3 className='text-lg font-bold text-white mb-2'>Expensive Software</h3>
+                    <p className='text-sm text-slate-400 mb-3'>
+                      Most property management tools cost $50-200/month. Too much for small portfolios.
+                    </p>
+                    <div className='flex items-center gap-2 text-emerald-300 text-sm font-semibold'>
+                      <ArrowRight className='h-4 w-4' />
+                      <span>Solution: 100% free forever. No hidden fees.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* How It Works */}
         <section
           id='how-it-works'
-          className='w-full py-14 md:py-16 px-4'
+          className='w-full py-16 md:py-20 px-4 scroll-mt-20'
         >
-          <div className='max-w-5xl mx-auto space-y-8 bg-translucent rounded-3xl p-6 md:p-10 text-slate-50'>
-            <div className='space-y-2 text-center'>
-              <h2 className='text-2xl md:text-3xl font-semibold tracking-tight text-white'>How {APP_NAME} fits your day-to-day</h2>
-              <p className='text-sm md:text-base text-slate-100/80 max-w-2xl mx-auto'>
-                Go from spreadsheets and text-message chaos to a single, organized system for
-                properties, tenants, leases, rent, and maintenance.
+          <div className='max-w-6xl mx-auto space-y-12'>
+            <div className='text-center space-y-3 animate-in fade-in duration-700'>
+              <h2 className='text-3xl md:text-4xl font-bold text-white'>
+                Get Started in Minutes, Not Days
+              </h2>
+              <p className='text-lg text-slate-300 max-w-2xl mx-auto'>
+                No complicated setup. No training required. Just sign up and start managing.
               </p>
             </div>
-            <div className='grid gap-4 md:grid-cols-4 text-[13px] md:text-sm'>
-              <div className='rounded-2xl border border-white/10 bg-slate-950/40 p-4 flex flex-col gap-2'>
-                <span className='text-[11px] font-semibold text-emerald-300'>Step 1</span>
-                <h3 className='font-semibold'>Add your properties & units</h3>
-                <p className='text-slate-100/85'>
-                  Create buildings and units in minutes with beds, baths, rent amounts, and photos.
-                </p>
-              </div>
-              <div className='rounded-2xl border border-white/10 bg-slate-950/40 p-4 flex flex-col gap-2'>
-                <span className='text-[11px] font-semibold text-emerald-300'>Step 2</span>
-                <h3 className='font-semibold'>Invite tenants & send leases</h3>
-                <p className='text-slate-600'>
-                  Send digital lease agreements for e-signature and keep all documents in one place.
-                </p>
-              </div>
-              <div className='rounded-2xl border border-white/10 bg-slate-950/40 p-4 flex flex-col gap-2'>
-                <span className='text-[11px] font-semibold text-emerald-300'>Step 3</span>
-                <h3 className='font-semibold'>Collect rent online</h3>
-                <p className='text-slate-600'>
-                  Tenants pay through a secure portal. Funds route directly to your connected bank
-                  account via Stripe.
-                </p>
-              </div>
-              <div className='rounded-2xl border border-white/10 bg-slate-950/40 p-4 flex flex-col gap-2'>
-                <span className='text-[11px] font-semibold text-emerald-300'>Step 4</span>
-                <h3 className='font-semibold'>Stay on top of issues</h3>
-                <p className='text-slate-600'>
-                  Tenants submit maintenance tickets, you track status, and everyone stays updated
-                  automatically.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
 
-        {/* Pricing tiers for different portfolio sizes */}
-        <section className='w-full py-16 px-4'>
-          <div className='max-w-5xl mx-auto space-y-8 bg-translucent rounded-3xl p-6 md:p-10 text-slate-50'>
-            <div className='space-y-2 text-center'>
-              <h2 className='text-2xl md:text-3xl font-semibold tracking-tight text-white'>Pricing that grows with your units</h2>
-              <p className='text-sm md:text-base text-slate-100/80 max-w-2xl mx-auto'>
-                Start free for your first properties. Upgrade only when you add more units or need
-                advanced reporting and collaboration.
-              </p>
-            </div>
-            <div className='grid gap-4 md:grid-cols-3 text-[13px] md:text-sm'>
-              <div className='rounded-2xl border border-white/10 bg-slate-950/40 p-5 flex flex-col gap-4'>
-                <div className='space-y-1'>
-                  <h3 className='font-semibold text-lg text-white'>Starter</h3>
-                  <p className='text-slate-100/80 text-xs md:text-sm'>For individual landlords and side hustlers.</p>
-                </div>
-                <div className='space-y-1'>
-                  <div className='text-2xl font-semibold text-white'>Free</div>
-                  <div className='text-slate-200 text-xs'>Up to 24 units</div>
-                </div>
-                <ul className='space-y-1 text-slate-100/85'>
-                  <li>• Unlimited properties & tenants (within unit limit)</li>
-                  <li>• Online rent payments</li>
-                  <li>• Digital leases & document storage</li>
-                  <li>• Maintenance requests & tracking</li>
-                  <li>• Email reminders for rent and tickets</li>
-                </ul>
-                <a
-                  href='/(auth)/sign-up'
-                  className='mt-auto inline-flex items-center justify-center rounded-full bg-emerald-400 text-slate-950 px-4 py-2 text-xs font-semibold hover:bg-emerald-300 transition'
-                >
-                  Start free
-                </a>
-              </div>
-              <div className='rounded-2xl border border-emerald-300/80 bg-emerald-500/20 p-5 flex flex-col gap-4 ring-2 ring-emerald-300/60'>
-                <div className='space-y-1'>
-                  <div className='inline-flex items-center gap-2 rounded-full bg-emerald-400/20 px-3 py-1 text-[11px] text-emerald-200 border border-emerald-300/80'>
-                    <span>Most popular</span>
+            <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
+              {[
+                {
+                  step: '1',
+                  icon: Building2,
+                  title: 'Add Your Properties',
+                  description: 'Create properties and units in minutes. Add photos, rent amounts, and amenities.',
+                  iconBg: 'bg-emerald-500/20',
+                  iconBorder: 'border-emerald-500/30',
+                  iconColor: 'text-emerald-400',
+                },
+                {
+                  step: '2',
+                  icon: Users,
+                  title: 'Invite Tenants',
+                  description: 'Send digital invitations. Tenants create accounts and access their portal instantly.',
+                  iconBg: 'bg-blue-500/20',
+                  iconBorder: 'border-blue-500/30',
+                  iconColor: 'text-blue-400',
+                },
+                {
+                  step: '3',
+                  icon: FileText,
+                  title: 'Send Digital Leases',
+                  description: 'Create lease agreements and send for e-signature. All documents stored securely.',
+                  iconBg: 'bg-purple-500/20',
+                  iconBorder: 'border-purple-500/30',
+                  iconColor: 'text-purple-400',
+                },
+                {
+                  step: '4',
+                  icon: CreditCard,
+                  title: 'Collect Rent Online',
+                  description: 'Tenants pay through Stripe. Money goes directly to your bank account. Automated reminders included.',
+                  iconBg: 'bg-emerald-500/20',
+                  iconBorder: 'border-emerald-500/30',
+                  iconColor: 'text-emerald-400',
+                },
+              ].map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.step}
+                    className='group rounded-2xl border border-white/10 bg-slate-950/60 p-6 space-y-4 hover:border-emerald-500/40 hover:bg-slate-950/80 transition-all duration-300 hover:scale-105 animate-in fade-in slide-in-from-bottom'
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className='flex items-center gap-3'>
+                      <div className={`rounded-xl ${item.iconBg} p-3 border ${item.iconBorder}`}>
+                        <Icon className={`h-6 w-6 ${item.iconColor}`} />
+                      </div>
+                      <span className='text-2xl font-bold text-white/20'>{item.step}</span>
+                    </div>
+                    <h3 className='text-lg font-bold text-white'>{item.title}</h3>
+                    <p className='text-sm text-slate-300 leading-relaxed'>{item.description}</p>
                   </div>
-                  <h3 className='font-semibold text-lg text-white'>Pro</h3>
-                  <p className='text-emerald-50 text-xs md:text-sm'>For growing portfolios and lean management teams.</p>
-                </div>
-                <div className='space-y-1'>
-                  <div className='text-2xl font-semibold text-white'>$79</div>
-                  <div className='text-emerald-50 text-xs'>per month · 25–199 units</div>
-                </div>
-                <ul className='space-y-1 text-emerald-50'>
-                  <li>• Everything in Starter</li>
-                  <li>• Advanced income & vacancy reports</li>
-                  <li>• Automated late fees & extra reminders</li>
-                  <li>• Team access for assistants & bookkeepers</li>
-                  <li>• Priority support</li>
-                </ul>
-                <a
-                  href='/(auth)/sign-up'
-                  className='mt-auto inline-flex items-center justify-center rounded-full bg-emerald-300 text-slate-950 px-4 py-2 text-xs font-semibold hover:bg-emerald-200 transition'
-                >
-                  Try Pro
-                </a>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Features Grid */}
+        <section className='w-full py-16 md:py-20 px-4 bg-gradient-to-b from-slate-900/30 to-transparent'>
+          <div className='max-w-6xl mx-auto space-y-12'>
+            <div className='text-center space-y-3 animate-in fade-in duration-700'>
+              <h2 className='text-3xl md:text-4xl font-bold text-white'>
+                Everything You Need, Nothing You Don't
+              </h2>
+              <p className='text-lg text-slate-300 max-w-2xl mx-auto'>
+                Powerful features designed specifically for small landlords and property managers.
+              </p>
+            </div>
+
+            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+              {[
+                { icon: DollarSign, title: 'Online Rent Collection', desc: 'Stripe-powered payments with automatic reminders ($2 per transaction)' },
+                { icon: FileText, title: 'Digital Leases', desc: 'E-signatures, storage, and renewal tracking' },
+                { icon: Wrench, title: 'Maintenance Tickets', desc: 'Priority-based system with tenant communication' },
+                { icon: Users, title: 'Tenant Applications', desc: 'Digital forms with organized approval workflow' },
+                { icon: TrendingUp, title: 'Revenue Tracking', desc: 'See income, late payments, and trends at a glance' },
+                { icon: MessageSquare, title: 'Tenant Communication', desc: 'Built-in messaging for quick responses' },
+                { icon: Calendar, title: 'Lease Renewals', desc: 'Automated reminders before lease expiration' },
+                { icon: Shield, title: 'Secure & Compliant', desc: 'Bank-level encryption for all sensitive data' },
+                { icon: Zap, title: 'Mobile Friendly', desc: 'Manage everything from your phone or tablet' },
+              ].map((feature, index) => {
+                const Icon = feature.icon;
+                return (
+                  <div
+                    key={feature.title}
+                    className='rounded-xl border border-white/10 bg-slate-950/40 p-5 space-y-3 hover:border-emerald-500/30 hover:bg-slate-950/60 transition-all duration-300 group animate-in fade-in slide-in-from-bottom'
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className='flex items-center gap-3'>
+                      <div className='rounded-lg bg-emerald-500/20 p-2 border border-emerald-500/30 group-hover:bg-emerald-500/30 transition-colors'>
+                        <Icon className='h-5 w-5 text-emerald-400' />
+                      </div>
+                      <h3 className='font-semibold text-white text-sm'>{feature.title}</h3>
+                    </div>
+                    <p className='text-xs text-slate-400'>{feature.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing - Emphasizing Free */}
+        <section className='w-full py-16 md:py-20 px-4'>
+          <div className='max-w-5xl mx-auto space-y-12'>
+            <div className='text-center space-y-3 animate-in fade-in duration-700'>
+              <div className='inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-4 py-1.5 text-emerald-300 text-xs font-medium border border-emerald-500/30'>
+                <Sparkles className='h-3 w-3' />
+                <span>No Credit Card Required</span>
               </div>
-              <div className='rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col gap-4'>
-                <div className='space-y-1'>
-                  <h3 className='font-semibold text-lg text-white'>Large portfolio</h3>
-                  <p className='text-slate-100/80 text-xs md:text-sm'>For property management companies and larger owners.</p>
+              <h2 className='text-3xl md:text-4xl font-bold text-white'>
+                Free Forever. Seriously.
+              </h2>
+              <p className='text-lg text-slate-300 max-w-2xl mx-auto'>
+                We believe property management software should be accessible to everyone. Start free with up to 24 units, then upgrade when you're ready to grow.
+              </p>
+            </div>
+
+            <div className='grid gap-6 md:grid-cols-3'>
+              <div className='rounded-2xl border-2 border-emerald-500/50 bg-emerald-500/10 p-8 flex flex-col gap-6 relative overflow-hidden'>
+                <div className='absolute top-0 right-0 bg-emerald-500 text-slate-950 px-4 py-1 text-xs font-bold rounded-bl-lg'>
+                  MOST POPULAR
+                </div>
+                <div className='space-y-2'>
+                  <h3 className='text-2xl font-bold text-white'>Free Plan</h3>
+                  <p className='text-emerald-200 text-sm'>Perfect for all landlords</p>
                 </div>
                 <div className='space-y-1'>
-                  <div className='text-2xl font-semibold text-white'>$250</div>
-                  <div className='text-slate-200 text-xs'>per month · 200+ units</div>
+                  <div className='text-5xl font-bold text-white'>$0</div>
+                  <div className='text-emerald-200 text-sm'>Forever • Up to 24 units</div>
                 </div>
-                <ul className='space-y-1 text-slate-700'>
-                  <li>• Everything in Pro</li>
-                  <li>• Custom branding & subdomain setup</li>
-                  <li>• Higher automation & notification limits</li>
-                  <li>• Dedicated onboarding help</li>
-                  <li>• Priority roadmap feedback</li>
+                <ul className='space-y-3 text-sm text-white flex-1'>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Up to 24 units</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Online rent payments (Stripe)</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Digital leases & e-signatures</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Maintenance ticket system</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Tenant applications</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Revenue tracking & reports</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Tenant communication portal</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Mobile-friendly dashboard</span>
+                  </li>
                 </ul>
-                <a
-                  href='/contact'
-                  className='mt-auto inline-flex items-center justify-center rounded-full border border-emerald-300/80 text-emerald-100 px-4 py-2 text-xs font-semibold hover:bg-emerald-500/10 transition'
+                <div className='rounded-lg bg-slate-900/60 border border-white/10 p-3 space-y-1'>
+                  <p className='text-xs font-semibold text-slate-300'>Transaction Fees:</p>
+                  <p className='text-xs text-slate-400'>$2 per rent payment</p>
+                </div>
+                <Link
+                  href='/sign-up'
+                  className='w-full inline-flex items-center justify-center rounded-full bg-emerald-500 text-slate-950 px-6 py-3 text-sm font-bold hover:bg-emerald-400 transition-all duration-300 hover:scale-105'
                 >
-                  Talk to us
-                </a>
+                  Start Free Now
+                  <ArrowRight className='ml-2 h-4 w-4' />
+                </Link>
+              </div>
+
+              <div className='rounded-2xl border border-white/10 bg-slate-950/40 p-8 flex flex-col gap-6'>
+                <div className='space-y-2'>
+                  <h3 className='text-2xl font-bold text-white'>Pro (Coming Soon)</h3>
+                  <p className='text-slate-300 text-sm'>For growing portfolios</p>
+                </div>
+                <div className='space-y-1'>
+                  <div className='text-5xl font-bold text-white'>$29.99</div>
+                  <div className='text-slate-300 text-sm'>per month • 25+ units</div>
+                </div>
+                <ul className='space-y-3 text-sm text-slate-300 flex-1'>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Everything in Free</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Advanced analytics & reports</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Automated late fees</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Team access & collaboration</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Priority support</span>
+                  </li>
+                </ul>
+                <div className='rounded-lg bg-slate-900/60 border border-white/10 p-3 space-y-1'>
+                  <p className='text-xs font-semibold text-slate-300'>Transaction Fees:</p>
+                  <p className='text-xs text-slate-400'>$2 per rent payment</p>
+                </div>
+                <Link
+                  href='/contact'
+                  className='w-full inline-flex items-center justify-center rounded-full border-2 border-white/30 text-white px-6 py-3 text-sm font-semibold hover:bg-white/10 transition-all duration-300'
+                >
+                  Get Notified
+                </Link>
+              </div>
+
+              <div className='rounded-2xl border border-white/10 bg-slate-950/40 p-8 flex flex-col gap-6'>
+                <div className='space-y-2'>
+                  <h3 className='text-2xl font-bold text-white'>Enterprise</h3>
+                  <p className='text-slate-300 text-sm'>For property management companies</p>
+                </div>
+                <div className='space-y-1'>
+                  <div className='text-5xl font-bold text-white'>Custom</div>
+                  <div className='text-slate-300 text-sm'>Contact us</div>
+                </div>
+                <ul className='space-y-3 text-sm text-slate-300 flex-1'>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Everything in Pro</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Custom branding & subdomains</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>API access</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Dedicated support</span>
+                  </li>
+                  <li className='flex items-start gap-2'>
+                    <CheckCircle2 className='h-5 w-5 text-emerald-400 shrink-0 mt-0.5' />
+                    <span>Custom integrations</span>
+                  </li>
+                </ul>
+                <div className='rounded-lg bg-slate-900/60 border border-white/10 p-3 space-y-1'>
+                  <p className='text-xs font-semibold text-slate-300'>Transaction Fees:</p>
+                  <p className='text-xs text-slate-400'>$2 per rent payment</p>
+                </div>
+                <Link
+                  href='/contact'
+                  className='w-full inline-flex items-center justify-center rounded-full border-2 border-white/30 text-white px-6 py-3 text-sm font-semibold hover:bg-white/10 transition-all duration-300'
+                >
+                  Contact Sales
+                </Link>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Who this is for / positioning */}
-        <section className='w-full py-14 md:py-16 px-4'>
-          <div className='max-w-5xl mx-auto space-y-8 bg-translucent rounded-3xl p-6 md:p-10 text-slate-50'>
-            <div className='space-y-2 text-center'>
-              <h2 className='text-2xl md:text-3xl font-semibold tracking-tight text-white'>Built for modern, lean landlords</h2>
-              <p className='text-sm md:text-base text-slate-100/80 max-w-2xl mx-auto'>
-                Skip the clunky legacy software. {APP_NAME} is fast, simple, and focused on what you
-                actually do every month.
-              </p>
+        {/* Final CTA */}
+        <section className='w-full py-16 md:py-20 px-4 bg-gradient-to-br from-emerald-500/10 via-blue-500/10 to-purple-500/10'>
+          <div className='max-w-4xl mx-auto text-center space-y-8 animate-in fade-in duration-700'>
+            <h2 className='text-3xl md:text-5xl font-bold text-white leading-tight'>
+              Ready to Stop Chasing Rent?
+            </h2>
+            <p className='text-xl text-slate-200 max-w-2xl mx-auto'>
+              Join thousands of landlords who've simplified their property management. Sign up free in 30 seconds.
+            </p>
+            <div className='flex flex-wrap items-center justify-center gap-4'>
+              <Link
+                href='/sign-up'
+                className='group inline-flex items-center justify-center rounded-full bg-emerald-500 text-slate-950 px-10 py-4 text-lg font-bold shadow-lg hover:bg-emerald-400 transition-all duration-300 hover:scale-105 hover:shadow-emerald-500/50'
+              >
+                Get Started Free
+                <ArrowRight className='ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform' />
+              </Link>
+              <Link
+                href='/contact'
+                className='inline-flex items-center justify-center rounded-full border-2 border-white/30 text-white px-8 py-4 text-base font-semibold hover:bg-white/10 transition-all duration-300'
+              >
+                Have Questions?
+              </Link>
             </div>
-            <div className='grid gap-4 md:grid-cols-3 text-[13px] md:text-sm'>
-              <div className='rounded-2xl border border-white/10 bg-slate-950/40 p-4 space-y-1'>
-                <h3 className='font-semibold'>New landlords (1–5 units)</h3>
-                <p className='text-slate-600'>
-                  Get out of spreadsheets and text threads. Keep all leases, payments, and tenants in
-                  one clean dashboard.
-                </p>
-              </div>
-              <div className='rounded-2xl border border-slate-200 bg-slate-50/80 p-4 space-y-1'>
-                <h3 className='font-semibold'>Growing portfolios (5–25 units)</h3>
-                <p className='text-slate-600'>
-                  Stay ahead of rent, renewals, and repairs as you scale without hiring a full office
-                  team.
-                </p>
-              </div>
-              <div className='rounded-2xl border border-slate-200 bg-slate-50/80 p-4 space-y-1'>
-                <h3 className='font-semibold'>Lean management companies</h3>
-                <p className='text-slate-600'>
-                  Offer a modern experience to owners and residents with online payments, branded
-                  portals, and clear reporting.
-                </p>
-              </div>
-            </div>
+            <p className='text-sm text-slate-400'>
+              No credit card required • Setup in minutes • Cancel anytime
+            </p>
           </div>
         </section>
       </main>
 
-      {/* Property collections as entry points */}
-      {/* Trust & contact */}
-      {/* <DealCountdown /> */}
       <CustomerReviews />
       <HomeContactCard />
     </>

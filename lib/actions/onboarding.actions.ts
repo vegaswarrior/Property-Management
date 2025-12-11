@@ -26,14 +26,6 @@ export async function roleOnboardingAction(prevState: unknown, formData: FormDat
     const managesForOthers = formData.get('managesForOthers') === 'on';
     const useSubdomain = formData.get('useSubdomain') === 'on';
 
-    console.log('Onboarding form data:', {
-      role,
-      unitsEstimateRange,
-      ownsProperties,
-      managesForOthers,
-      useSubdomain,
-    });
-
     const result = await setUserRoleAndLandlordIntake({
       role,
       unitsEstimateRange,
@@ -43,7 +35,11 @@ export async function roleOnboardingAction(prevState: unknown, formData: FormDat
     });
 
     if (!result.success) {
-      console.error('setUserRoleAndLandlordIntake failed:', result.message);
+      // Log error in development only
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.error('setUserRoleAndLandlordIntake failed:', result.message);
+      }
       return { success: false, message: result.message || 'Failed to save preferences', role };
     }
 
@@ -58,7 +54,11 @@ export async function roleOnboardingAction(prevState: unknown, formData: FormDat
       throw error;
     }
     
-    console.error('Role onboarding error:', error);
+    // Log error in development only
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Role onboarding error:', error instanceof Error ? error.message : 'Unknown error');
+    }
     const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
     return { success: false, message: errorMessage, role: null };
   }

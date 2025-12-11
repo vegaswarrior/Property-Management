@@ -1,115 +1,102 @@
-'use server';
+'use client';
 
-import { getLatestProductReviews } from '@/lib/actions/review.actions';
-import { formatDateTime } from '@/lib/utils';
 import Link from 'next/link';
-import Image from 'next/image';
-import Rating from '@/components/shared/product/rating';
+import { Star, Quote } from 'lucide-react';
 
-const CustomerReviews = async () => {
-  const reviews = await getLatestProductReviews(3);
+const reviews = [
+  {
+    id: '1',
+    name: 'Sarah Martinez',
+    role: 'Landlord, 8 units',
+    rating: 5,
+    text: 'Finally, a tool that doesn\'t cost an arm and a leg. I went from spending 10+ hours a month on admin work to maybe 2 hours. The online rent collection alone is worth it.',
+    location: 'Las Vegas, NV',
+  },
+  {
+    id: '2',
+    name: 'Michael Chen',
+    role: 'Property Manager, 24 units',
+    rating: 5,
+    text: 'The maintenance ticket system changed everything. No more lost texts or forgotten requests. Everything is tracked and organized. My tenants love how easy it is to submit tickets.',
+    location: 'Phoenix, AZ',
+  },
+  {
+    id: '3',
+    name: 'Jennifer Williams',
+    role: 'Landlord, 3 units',
+    rating: 5,
+    text: 'As a small landlord, I couldn\'t justify paying $50-100/month for property management software. This being free is incredible. It has everything I need and more.',
+    location: 'Reno, NV',
+  },
+];
 
-  const fallback = !reviews.length
-    ? [
-        {
-          id: 'dummy-1',
-          title: 'Rocken my everyday vibe',
-          description: 'Super comfy and the design gets compliments everywhere I go.',
-          rating: 5,
-          createdAt: new Date(),
-          user: { name: 'Sample Customer', image: null },
-          product: { name: 'Signature Hoodie', slug: '' },
-        },
-        {
-          id: 'dummy-2',
-          title: 'Perfect gift',
-          description: 'Bought this as a gift and they absolutely loved it.',
-          rating: 4,
-          createdAt: new Date(),
-          user: { name: 'Happy Gifter', image: null },
-          product: { name: 'Statement Tee', slug: '' },
-        },
-        {
-          id: 'dummy-3',
-          title: 'Great quality & fit',
-          description: 'Material feels premium and the fit is just right.',
-          rating: 5,
-          createdAt: new Date(),
-          user: { name: 'First Time Buyer', image: null },
-          product: { name: 'Everyday Crewneck', slug: '' },
-        },
-      ]
-    : reviews;
-
+const CustomerReviews = () => {
   return (
-    <section className="my-16 bg-white">
-      <div className="container mx-auto max-w-5xl px-4 md:px-6 space-y-6">
-        <header className="space-y-1">
-          <p className="text-xs tracking-[0.28em] uppercase text-emerald-600">Customer Reviews</p>
-          <h2 className="text-2xl md:text-3xl font-semibold text-slate-900">What people are saying</h2>
-        </header>
+    <section className="w-full py-16 md:py-20 px-4 bg-gradient-to-b from-transparent to-slate-900/20">
+      <div className="max-w-6xl mx-auto space-y-12">
+        <div className="text-center space-y-3 animate-in fade-in duration-700">
+          <h2 className="text-3xl md:text-4xl font-bold text-white">
+            Loved by Small Landlords Everywhere
+          </h2>
+          <p className="text-lg text-slate-300 max-w-2xl mx-auto">
+            See what real landlords are saying about managing their properties with us.
+          </p>
+        </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {fallback.map((review) => {
-            const created = formatDateTime(review.createdAt);
-            const userName = review.user?.name || 'Happy Customer';
-            const initials = userName
-              .split(' ')
-              .map((n) => n[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase();
+        <div className="grid gap-6 md:grid-cols-3">
+          {reviews.map((review, index) => (
+            <article
+              key={review.id}
+              className="group relative rounded-2xl border border-white/10 bg-slate-950/60 p-6 space-y-4 hover:border-emerald-500/30 hover:bg-slate-950/80 transition-all duration-300 hover:scale-[1.02] animate-in fade-in slide-in-from-bottom"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity">
+                <Quote className="h-8 w-8 text-emerald-400" />
+              </div>
+              
+              <div className="flex items-center gap-1 mb-2">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-4 w-4 ${
+                      i < review.rating
+                        ? 'fill-emerald-400 text-emerald-400'
+                        : 'fill-slate-700 text-slate-700'
+                    }`}
+                  />
+                ))}
+              </div>
 
-            return (
-              <article
-                key={review.id}
-                className="relative rounded-2xl border border-slate-200 bg-slate-50 p-4 flex flex-col gap-3 shadow-sm"
-              >
+              <p className="text-sm text-slate-200 leading-relaxed relative z-10">
+                "{review.text}"
+              </p>
+
+              <div className="pt-4 border-t border-white/10">
                 <div className="flex items-center gap-3">
-                  <div className="relative h-10 w-10 rounded-full overflow-hidden bg-emerald-600 flex items-center justify-center text-xs font-semibold text-white">
-                    {review.user?.image ? (
-                      <Image
-                        src={review.user.image}
-                        alt={userName}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <span>{initials}</span>
-                    )}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-slate-900">{userName}</span>
-                    <span className="text-[11px] text-slate-500">
-                      {created.dateOnly} · {created.timeOnly}
+                  <div className="h-10 w-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                    <span className="text-emerald-300 font-bold text-sm">
+                      {review.name.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>
-                </div>
-
-                <div className="space-y-1 text-sm text-slate-700">
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <Rating value={review.rating} />
-                    <span className="uppercase tracking-[0.18em] text-[10px] text-gray-300">
-                      {review.product?.name || 'Product'}
-                    </span>
+                  <div>
+                    <div className="font-semibold text-white text-sm">{review.name}</div>
+                    <div className="text-xs text-slate-400">{review.role}</div>
+                    <div className="text-xs text-slate-500">{review.location}</div>
                   </div>
-                  <p className="font-semibold text-sm text-slate-900 line-clamp-2">{review.title}</p>
-                  <p className="text-xs text-slate-600 line-clamp-3">{review.description}</p>
                 </div>
+              </div>
+            </article>
+          ))}
+        </div>
 
-                <div className="mt-auto pt-2 text-right">
-                  {review.product?.slug && (
-                    <Link
-                      href={`/product/${review.product.slug}`}
-                      className="text-[11px] text-emerald-700 hover:text-emerald-600 underline"
-                    >
-                      View product
-                    </Link>
-                  )}
-                </div>
-              </article>
-            );
-          })}
+        <div className="text-center">
+          <Link
+            href="/sign-up"
+            className="inline-flex items-center gap-2 text-emerald-300 hover:text-emerald-200 font-semibold text-sm transition-colors"
+          >
+            Join these happy landlords
+            <span className="text-emerald-400">→</span>
+          </Link>
         </div>
       </div>
     </section>

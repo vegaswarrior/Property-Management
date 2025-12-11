@@ -253,3 +253,22 @@ export const insertBlogPostSchema = z.object({
 export const updateBlogPostSchema = insertBlogPostSchema.extend({
   id: z.string().min(1, 'Id is required'),
 });
+
+// Schema for rental application
+const ssnRegex = /^\d{3}-?\d{2}-?\d{4}$/;
+
+export const rentalApplicationSchema = z.object({
+  fullName: z.string().min(2, 'Full name must be at least 2 characters').max(100),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().regex(phoneRegex, 'Invalid phone number format'),
+  ssn: z.string().regex(ssnRegex, 'SSN must be in format XXX-XX-XXXX or XXXXXXXXX'),
+  currentAddress: z.string().min(5, 'Current address must be at least 5 characters'),
+  currentEmployer: z.string().min(2, 'Current employer must be at least 2 characters'),
+  age: z.string().optional(),
+  monthlySalary: z.string().optional(),
+  yearlySalary: z.string().optional(),
+  hasPets: z.string().optional(),
+  petCount: z.string().optional(),
+  notes: z.string().optional(),
+  propertySlug: z.string().optional(),
+});

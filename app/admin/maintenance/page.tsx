@@ -38,7 +38,8 @@ export default async function AdminMaintenancePage() {
         </div>
 
         <div className='rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden'>
-          <table className='min-w-full text-sm'>
+          <div className='overflow-x-auto'>
+            <table className='min-w-full text-sm'>
             <thead className='bg-slate-50'>
               <tr>
                 <th className='px-4 py-2 text-left font-medium text-slate-500'>Created</th>
@@ -90,6 +91,7 @@ export default async function AdminMaintenancePage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </main>

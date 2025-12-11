@@ -43,7 +43,11 @@ export async function GET(request: NextRequest) {
       unreadCount,
     });
   } catch (error) {
-    console.error('Failed to fetch notifications:', error);
+    // Log error without exposing sensitive details
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Failed to fetch notifications:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -71,9 +75,40 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user has permission to create notifications for this user/landlord
-    // This is a simplified check - in production, you'd want more sophisticated authorization
-    if (userId !== session.user.id && !landlordId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (userId !== session.user.id) {
+      // If creating for another user, verify landlord relationship
+      if (landlordId) {
+        const landlord = await prisma.landlord.findFirst({
+          where: {
+            id: landlordId,
+            OR: [
+              { ownerUserId: session.user.id },
+              {
+                properties: {
+                  some: {
+                    units: {
+                      some: {
+                        leases: {
+                          some: {
+                            tenantId: userId,
+                            status: 'active',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        });
+
+        if (!landlord) {
+          return NextResponse.json({ error: 'Forbidden - not associated with this landlord' }, { status: 403 });
+        }
+      } else {
+        return NextResponse.json({ error: 'Forbidden - cannot create notifications for other users' }, { status: 403 });
+      }
     }
 
     const notification = await prisma.notification.create({
@@ -89,7 +124,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(notification);
   } catch (error) {
-    console.error('Failed to create notification:', error);
+    // Log error without exposing sensitive details
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Failed to create notification:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

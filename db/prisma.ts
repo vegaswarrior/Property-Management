@@ -2,7 +2,11 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaNeon } from '@prisma/adapter-neon';
 import { decryptField, encryptField } from '@/lib/encrypt';
 
-const connectionString = process.env.DATABASE_URL || "postgresql://neondb_owner:npg_5XDCcdTN4hpg@ep-steep-base-addqvf0g-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require";
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
 
 const adapter = new PrismaNeon({ connectionString });
 

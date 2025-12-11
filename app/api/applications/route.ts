@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/db/prisma";
 import { auth } from "@/auth";
 import { getLandlordBySubdomain } from "@/lib/actions/landlord.actions";
+import { rentalApplicationSchema } from "@/lib/validators";
+import { encryptField } from "@/lib/encrypt";
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,67 +46,75 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Not authenticated' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const {
-      fullName,
-      age,
-      email,
-      phone,
-      currentAddress,
-      currentEmployer,
-      monthlySalary,
-      yearlySalary,
-      hasPets,
-      petCount,
-      ssn,
-      notes,
-      propertySlug,
-    } = body as {
-      fullName?: string;
-      age?: string;
-      email?: string;
-      phone?: string;
-      currentAddress?: string;
-      currentEmployer?: string;
-      monthlySalary?: string;
-      yearlySalary?: string;
-      hasPets?: string;
-      petCount?: string;
-      ssn?: string;
-      notes?: string;
-      propertySlug?: string;
-    };
-
-    if (!fullName || !email || !phone || !currentAddress || !currentEmployer || !ssn) {
-      return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 });
+    // Parse and validate request body
+    const body = await req.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json({ success: false, message: "Invalid request body" }, { status: 400 });
     }
 
+    // Validate input with Zod
+    const validationResult = rentalApplicationSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: "Validation failed", 
+          errors: validationResult.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        }, 
+        { status: 400 }
+      );
+    }
+
+    const data = validationResult.data;
+
+    // Verify the property belongs to this landlord (if propertySlug is provided)
+    if (data.propertySlug) {
+      const property = await prisma.property.findFirst({
+        where: {
+          slug: data.propertySlug,
+          landlordId,
+        },
+      });
+
+      if (!property) {
+        return NextResponse.json(
+          { success: false, message: "Property not found or does not belong to this landlord" },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Encrypt SSN - NEVER store in plain text
+    const encryptedSsn = data.ssn ? await encryptField(data.ssn) : null;
+
+    // Build notes WITHOUT SSN (security: SSN should never be in notes)
     const notesCombined = [
-      notes,
-      age ? `Age: ${age}` : undefined,
-      currentAddress ? `Address: ${currentAddress}` : undefined,
-      currentEmployer ? `Employer: ${currentEmployer}` : undefined,
-      monthlySalary ? `Salary (monthly): ${monthlySalary}` : undefined,
-      yearlySalary ? `Salary (yearly): ${yearlySalary}` : undefined,
-      hasPets ? `Has pets: ${hasPets}` : undefined,
-      petCount ? `Number of pets: ${petCount}` : undefined,
-      hasPets && hasPets.toLowerCase().startsWith("y")
+      data.notes,
+      data.age ? `Age: ${data.age}` : undefined,
+      data.currentAddress ? `Address: ${data.currentAddress}` : undefined,
+      data.currentEmployer ? `Employer: ${data.currentEmployer}` : undefined,
+      data.monthlySalary ? `Salary (monthly): ${data.monthlySalary}` : undefined,
+      data.yearlySalary ? `Salary (yearly): ${data.yearlySalary}` : undefined,
+      data.hasPets ? `Has pets: ${data.hasPets}` : undefined,
+      data.petCount ? `Number of pets: ${data.petCount}` : undefined,
+      data.hasPets && data.hasPets.toLowerCase().startsWith("y")
         ? "Note: Applicant was informed that a $300 annual pet fee is added for pets."
         : undefined,
-      propertySlug ? `Property: ${propertySlug}` : undefined,
-      ssn ? `SSN: ${ssn}` : undefined,
+      data.propertySlug ? `Property: ${data.propertySlug}` : undefined,
+      // SSN is NOT included in notes - it's stored separately encrypted
     ]
       .filter(Boolean)
       .join("\n");
 
     const applicantId = session.user.id as string;
 
-    const unit = propertySlug
+    // Verify applicant is not trying to apply to a property they don't have access to
+    const unit = data.propertySlug
       ? await prisma.unit.findFirst({
           where: {
             isAvailable: true,
             property: {
-              slug: propertySlug,
+              slug: data.propertySlug,
               landlordId,
             },
           },
@@ -114,12 +124,13 @@ export async function POST(req: NextRequest) {
 
     await prisma.rentalApplication.create({
       data: {
-        fullName,
-        email,
-        phone,
+        fullName: data.fullName,
+        email: data.email,
+        phone: data.phone,
         notes: notesCombined,
+        encryptedSsn, // Store encrypted SSN separately
         status: "pending",
-        propertySlug: propertySlug || null,
+        propertySlug: data.propertySlug || null,
         unitId: unit?.id ?? null,
         applicantId,
       },
@@ -129,7 +140,13 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Application error", error);
+    // Log error without exposing sensitive details
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    // In production, use a proper logging service instead of console.error
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error("Application error", errorMessage);
+    }
     return NextResponse.json({ success: false, message: "Server error" }, { status: 500 });
   }
 }
