@@ -141,8 +141,6 @@ const AdminBrandingPage = async () => {
                 Current URL:{' '}
                 <a
                   href={`${protocol}://${landlord.subdomain}.${rootDomain}`}
-                  target='_blank'
-                  rel='noopener noreferrer'
                   className='font-mono text-violet-200/80 hover:text-violet-100 transition-colors'
                 >
                   {`${protocol}://${landlord.subdomain}.${rootDomain}`}

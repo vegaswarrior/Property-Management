@@ -50,7 +50,7 @@ export default function OnboardingRolePage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center px-4 py-10">
+    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-violet-800/60 to-slate-900 text-slate-50 flex items-center justify-center px-4 py-10">
       <div className="max-w-2xl w-full space-y-12">
         {/* Progress indicator */}
         <div className="space-y-3">
@@ -61,12 +61,12 @@ export default function OnboardingRolePage() {
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   i + 1 <= step
                     ? 'w-12 bg-emerald-500'
-                    : 'w-8 bg-slate-300'
+                    : 'w-8 bg-slate-600/50'
                 }`}
               />
             ))}
           </div>
-          <p className="text-center text-xs text-slate-500">
+          <p className="text-center text-xs text-slate-300/80">
             Step {step} of {totalSteps}
           </p>
         </div>
@@ -82,13 +82,13 @@ export default function OnboardingRolePage() {
           {step === 1 && (
             <div className="space-y-8 text-center animate-in fade-in duration-500">
               <div className="space-y-4">
-                <p className="text-sm uppercase tracking-[0.3em] text-emerald-600/80">
+                <p className="text-sm uppercase tracking-[0.3em] text-emerald-400/80">
                   Welcome to Rent Flows HQ
                 </p>
-                <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight text-slate-50">
                   How many rental units do you manage?
                 </h1>
-                <p className="text-lg text-slate-600 max-w-xl mx-auto">
+                <p className="text-lg text-slate-300/80 max-w-xl mx-auto">
                   This helps us tailor your dashboard and recommend the right tools for your portfolio size.
                 </p>
               </div>
@@ -108,13 +108,13 @@ export default function OnboardingRolePage() {
                       setTimeout(handleNext, 300);
                     }}
                   >
-                    <div className={`rounded-2xl border-2 transition-all duration-200 p-6 text-left ${
+                    <div className={`rounded-xl border transition-all duration-200 p-6 text-left ${
                       formData.unitsEstimateRange === opt.value
-                        ? 'border-emerald-500 bg-emerald-50'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                        ? 'border-emerald-500/60 bg-slate-900/90'
+                        : 'border-white/10 bg-slate-900/60 hover:border-violet-400/60 hover:bg-slate-900/90'
                     }`}>
-                      <p className="text-xl font-semibold">{opt.label}</p>
-                      <p className="text-sm text-slate-600 mt-1">{opt.desc}</p>
+                      <p className="text-xl font-semibold text-slate-50">{opt.label}</p>
+                      <p className="text-sm text-slate-300/80 mt-1">{opt.desc}</p>
                     </div>
                   </label>
                 ))}
@@ -126,31 +126,31 @@ export default function OnboardingRolePage() {
           {step === 2 && (
             <div className="space-y-8 text-center animate-in fade-in duration-500">
               <div className="space-y-4">
-                <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight text-slate-50">
                   Tell us about your role
                 </h1>
-                <p className="text-lg text-slate-600 max-w-xl mx-auto">
+                <p className="text-lg text-slate-300/80 max-w-xl mx-auto">
                   Do you own these properties, manage them for others, or both?
                 </p>
               </div>
 
               <div className="grid gap-4 max-w-md mx-auto">
                 <label className="cursor-pointer group">
-                  <div className={`rounded-2xl border-2 transition-all duration-200 p-6 text-left ${
+                  <div className={`rounded-xl border transition-all duration-200 p-6 text-left ${
                     formData.ownsProperties
-                      ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      ? 'border-emerald-500/60 bg-slate-900/90'
+                      : 'border-white/10 bg-slate-900/60 hover:border-violet-400/60 hover:bg-slate-900/90'
                   }`}>
                     <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
                         checked={formData.ownsProperties}
                         onChange={(e) => setFormData({ ...formData, ownsProperties: e.target.checked })}
-                        className="mt-1 h-5 w-5 rounded border-slate-300 bg-white text-emerald-500"
+                        className="mt-1 h-5 w-5 rounded border-white/20 bg-slate-800 text-emerald-500"
                       />
                       <div>
-                        <p className="text-xl font-semibold">I own properties</p>
-                        <p className="text-sm text-slate-600 mt-1">
+                        <p className="text-xl font-semibold text-slate-50">I own properties</p>
+                        <p className="text-sm text-slate-300/80 mt-1">
                           You're the owner or part of an ownership group
                         </p>
                       </div>
@@ -159,21 +159,21 @@ export default function OnboardingRolePage() {
                 </label>
 
                 <label className="cursor-pointer group">
-                  <div className={`rounded-2xl border-2 transition-all duration-200 p-6 text-left ${
+                  <div className={`rounded-xl border transition-all duration-200 p-6 text-left ${
                     formData.managesForOthers
-                      ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      ? 'border-emerald-500/60 bg-slate-900/90'
+                      : 'border-white/10 bg-slate-900/60 hover:border-violet-400/60 hover:bg-slate-900/90'
                   }`}>
                     <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
                         checked={formData.managesForOthers}
                         onChange={(e) => setFormData({ ...formData, managesForOthers: e.target.checked })}
-                        className="mt-1 h-5 w-5 rounded border-slate-300 bg-white text-emerald-500"
+                        className="mt-1 h-5 w-5 rounded border-white/20 bg-slate-800 text-emerald-500"
                       />
                       <div>
-                        <p className="text-xl font-semibold">I manage for other owners</p>
-                        <p className="text-sm text-slate-600 mt-1">
+                        <p className="text-xl font-semibold text-slate-50">I manage for other owners</p>
+                        <p className="text-sm text-slate-300/80 mt-1">
                           You're a third-party property manager or management company
                         </p>
                       </div>
@@ -208,25 +208,25 @@ export default function OnboardingRolePage() {
           {step === 3 && (
             <div className="space-y-8 text-center animate-in fade-in duration-500">
               <div className="space-y-4">
-                <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight text-slate-50">
                   Get your own tenant portal URL
                 </h1>
-                <p className="text-lg text-slate-600 max-w-xl mx-auto">
-                  We'll create a custom URL like <span className="font-mono text-emerald-700">yourname.yourdomain.com</span> that you can share with tenants for applications and rent payments.
+                <p className="text-lg text-slate-300/80 max-w-xl mx-auto">
+                  We'll create a custom URL like <span className="font-mono text-emerald-400">yourname.yourdomain.com</span> that you can share with tenants for applications and rent payments.
                 </p>
               </div>
 
               <div className="max-w-md mx-auto">
                 <label className="cursor-pointer group">
-                  <div className={`rounded-2xl border-2 transition-all duration-200 p-6 ${
+                  <div className={`rounded-xl border transition-all duration-200 p-6 ${
                     formData.useSubdomain
-                      ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      ? 'border-emerald-500/60 bg-slate-900/90'
+                      : 'border-white/10 bg-slate-900/60 hover:border-violet-400/60 hover:bg-slate-900/90'
                   }`}>
                     <div className="flex items-center justify-between">
                       <div className="text-left">
-                        <p className="text-xl font-semibold">Enable custom tenant portal</p>
-                        <p className="text-sm text-slate-600 mt-1">
+                        <p className="text-xl font-semibold text-slate-50">Enable custom tenant portal</p>
+                        <p className="text-sm text-slate-300/80 mt-1">
                           Recommended for professional landlords
                         </p>
                       </div>
@@ -234,7 +234,7 @@ export default function OnboardingRolePage() {
                         type="checkbox"
                         checked={formData.useSubdomain}
                         onChange={(e) => setFormData({ ...formData, useSubdomain: e.target.checked })}
-                        className="h-6 w-6 rounded border-slate-300 bg-white text-emerald-500"
+                        className="h-6 w-6 rounded border-white/20 bg-slate-800 text-emerald-500"
                       />
                     </div>
                   </div>
@@ -242,7 +242,7 @@ export default function OnboardingRolePage() {
               </div>
 
               {state && !state.success && state.message && (
-                <p className="text-sm text-red-400">{state.message}</p>
+                <p className="text-sm text-red-400/90">{state.message}</p>
               )}
 
               <div className="flex gap-3 max-w-md mx-auto">

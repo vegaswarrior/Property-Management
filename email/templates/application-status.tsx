@@ -23,6 +23,10 @@ export default function ApplicationStatusEmail({
   const landlordName = landlord.name;
   const logoUrl = landlord.logoUrl;
   const subdomain = landlord.subdomain;
+  
+  // Build support email based on environment
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000';
+  const supportEmail = `support@${subdomain}.${rootDomain}`;
 
   const statusConfig = {
     pending: {
@@ -288,8 +292,8 @@ export default function ApplicationStatusEmail({
           <div className="footer">
             <p className="footer-text">
               Questions? Contact us at{' '}
-              <a href={`mailto:support@${subdomain}.localhost:3000`} className="help-link">
-                support@{subdomain}.localhost:3000
+              <a href={`mailto:${supportEmail}`} className="help-link">
+                {supportEmail}
               </a>
             </p>
             <p className="footer-text" style={{ marginTop: '8px' }}>

@@ -14,6 +14,52 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: 'jwt' as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' 
+        ? `__Secure-next-auth.session-token`
+        : `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        // Domain must be a registrable domain without port.
+        // Set only in production to allow cross-subdomain cookies.
+        ...(process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_ROOT_DOMAIN
+          ? { domain: `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}` }
+          : {}),
+      },
+    },
+    callbackUrl: {
+      name: process.env.NODE_ENV === 'production'
+        ? `__Secure-next-auth.callback-url`
+        : `next-auth.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        ...(process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_ROOT_DOMAIN
+          ? { domain: `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}` }
+          : {}),
+      },
+    },
+    csrfToken: {
+      name: process.env.NODE_ENV === 'production'
+        ? `__Host-next-auth.csrf-token`
+        : `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        ...(process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_ROOT_DOMAIN
+          ? { domain: `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}` }
+          : {}),
+      },
+    },
+  },
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     CredentialsProvider({

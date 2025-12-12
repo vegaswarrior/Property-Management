@@ -132,17 +132,37 @@ export async function signUpUser(prevState: unknown, formData: FormData) {
       redirect(rawCallbackUrl);
     }
 
-    // Redirect based on role
-    if (roleValue === 'tenant') {
-      // Tenants go directly to their profile - no onboarding wizard
-      redirect('/user/profile');
-    } else if (roleValue === 'landlord' || roleValue === 'property_manager') {
-      // Landlords and property managers go through onboarding wizard
-      redirect('/onboarding/role');
-    } else {
-      // Default fallback
-      redirect('/');
+    // Get the created user to get their ID for subdomain redirect logic
+    const createdUser = await prisma.user.findUnique({
+      where: { email: user.email },
+      select: { id: true },
+    });
+
+    if (!createdUser) {
+      // Fallback if user lookup fails
+      if (roleValue === 'tenant') {
+        redirect('/user/profile');
+      } else if (roleValue === 'landlord' || roleValue === 'property_manager') {
+        redirect('/onboarding/role');
+      } else {
+        redirect('/');
+      }
     }
+
+    // For sign-up, use subdomain redirect logic but send to onboarding for landlords
+    const redirectUrl = await getSubdomainRedirectUrl(roleValue, createdUser.id);
+    
+    // Override for landlords - send to onboarding instead of admin dashboard
+    if ((roleValue === 'landlord' || roleValue === 'property_manager') && redirectUrl === '/admin/overview') {
+      redirect('/onboarding/role');
+    }
+    
+    // For tenants, check if they need onboarding before going to their page
+    if (roleValue === 'tenant' && redirectUrl.includes('/user')) {
+      redirect('/user/profile');
+    }
+    
+    redirect(redirectUrl || '/');
   } catch (error) {
     if (isRedirectError(error)) {
       throw error;

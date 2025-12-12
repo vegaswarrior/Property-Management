@@ -104,19 +104,25 @@ export class NotificationService {
     // Get landlord information
     const landlord = await prisma.landlord.findUnique({
       where: { id: landlordId },
-      select: { name: true, subdomain: true, logoUrl: true },
+      select: { name: true, subdomain: true, logoUrl: true, useSubdomain: true },
     });
 
     if (!landlord) return;
 
     // Get the root domain for login link
-    const rawApex = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+    const rawApex = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000';
     
-    let loginUrl = 'http://localhost:3000/sign-in';
-    if (rawApex) {
-      // For now, use a simple subdomain-based login URL
-      // In production, this would be more sophisticated
-      loginUrl = `https://app.${rawApex}/sign-in`;
+    // Build login URL based on environment
+    const isLocalhost = rawApex.includes('localhost');
+    const protocol = isLocalhost ? 'http' : 'https';
+    
+    // If landlord has a subdomain, use it for the login URL
+    let loginUrl: string;
+    if (landlord.subdomain && landlord.useSubdomain) {
+      loginUrl = `${protocol}://${landlord.subdomain}.${rawApex}/sign-in`;
+    } else {
+      // Fallback to main domain
+      loginUrl = `${protocol}://${rawApex}/sign-in`;
     }
 
     try {

@@ -74,7 +74,9 @@ export default function NotificationEmail({
 }: NotificationEmailProps) {
   const colors = getNotificationColors(notificationType);
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000';
-  const landlordUrl = `https://${landlord.subdomain}.${rootDomain}`;
+  // For emails, use https in production, http for localhost
+  const protocol = rootDomain.includes('localhost') ? 'http' : 'https';
+  const landlordUrl = `${protocol}://${landlord.subdomain}.${rootDomain}`;
 
   return (
     <Html>
@@ -215,7 +217,7 @@ export default function NotificationEmail({
                 Sign In
               </Link>
               <Link
-                href={`${landlordUrl}/user/maintenance`}
+                href={`${landlordUrl}/user`}
                 style={{
                   fontSize: '12px',
                   color: colors.primary,
@@ -227,10 +229,10 @@ export default function NotificationEmail({
                   borderRadius: '6px',
                 }}
               >
-                Maintenance
+                Dashboard
               </Link>
               <Link
-                href={`${landlordUrl}/user/payments`}
+                href={`${landlordUrl}/user/notifications`}
                 style={{
                   fontSize: '12px',
                   color: colors.primary,
@@ -242,7 +244,7 @@ export default function NotificationEmail({
                   borderRadius: '6px',
                 }}
               >
-                Payments
+                Notifications
               </Link>
             </div>
           </Section>
@@ -258,16 +260,16 @@ export default function NotificationEmail({
             </Text>
             <div style={{ marginTop: '12px' }}>
               <Link
-                href={`${landlordUrl}/settings`}
+                href={`${landlordUrl}/user/profile`}
                 style={{ fontSize: '12px', color: colors.primary, textDecoration: 'none', marginRight: '16px' }}
               >
-                Notification Settings
+                Profile Settings
               </Link>
               <Link
-                href={`${landlordUrl}/support`}
+                href={`${landlordUrl}/user`}
                 style={{ fontSize: '12px', color: colors.primary, textDecoration: 'none' }}
               >
-                Support
+                Dashboard
               </Link>
             </div>
           </Section>
