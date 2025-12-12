@@ -10,8 +10,9 @@ export default function SignOutButton() {
 
   const handleClick = async () => {
     try {
-      await signOut({ callbackUrl: '/sign-in' })
-      // Optionally refresh client state
+      await signOut({ redirect: false })
+      // Manually redirect to home after sign out completes
+      router.push('/')
       router.refresh()
     } catch (error) {
       console.error('Sign out failed', error)

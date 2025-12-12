@@ -28,8 +28,10 @@ const SignInPage = async (props: {
 
   const session = await auth();
 
-  if (session) {
-    return redirect(callbackUrl || '/');
+  // Only redirect if there's a session AND a valid callback URL
+  // This prevents redirect loops when signing out
+  if (session && callbackUrl && callbackUrl !== '/sign-in') {
+    return redirect(callbackUrl);
   }
 
   const headersList = await headers();
