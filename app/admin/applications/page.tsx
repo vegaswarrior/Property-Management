@@ -19,13 +19,31 @@ const AdminApplicationsPage = async () => {
 
   const landlordId = landlordResult.landlord.id;
 
+  // Get all properties for this landlord to match by propertySlug
+  const landlordProperties = await prisma.property.findMany({
+    where: { landlordId },
+    select: { slug: true },
+  });
+  const landlordPropertySlugs = landlordProperties.map(p => p.slug);
+
   const applications = await prisma.rentalApplication.findMany({
     where: {
-      unit: {
-        property: {
-          landlordId,
+      OR: [
+        // Applications linked to a unit under this landlord
+        {
+          unit: {
+            property: {
+              landlordId,
+            },
+          },
         },
-      },
+        // Applications with a propertySlug matching this landlord's properties (even if no unit linked yet)
+        {
+          propertySlug: {
+            in: landlordPropertySlugs,
+          },
+        },
+      ],
     },
     orderBy: { createdAt: 'desc' },
     include: {

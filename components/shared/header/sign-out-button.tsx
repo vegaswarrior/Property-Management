@@ -2,17 +2,17 @@
 
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { logout } from '@/lib/actions/auth.actions'
 
 export default function SignOutButton() {
   const router = useRouter()
 
   const handleClick = async () => {
     try {
-      await signOut({ redirect: false })
-      // Manually redirect to home after sign out completes
-      router.push('/')
+      await logout('/')
+      // Server will redirect; ensure client state updates
+      router.replace('/')
       router.refresh()
     } catch (error) {
       console.error('Sign out failed', error)

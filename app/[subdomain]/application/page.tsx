@@ -56,22 +56,27 @@ export default function SubdomainApplicationPage() {
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirect to sign-up if not authenticated
+  // Redirect to sign-up if not authenticated or not a tenant
   useEffect(() => {
-    if (status === "unauthenticated") {
-      const callbackUrl = propertySlug
-        ? `/application?property=${encodeURIComponent(propertySlug)}`
-        : "/application";
-      router.push(`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+    if (status === "authenticated" && session?.user?.role === "tenant") {
+      // User is authenticated and is a tenant, allow access
+      return;
+    } else if (status === "unauthenticated" || (status === "authenticated" && session?.user?.role !== "tenant")) {
+      // Not authenticated or not a tenant, redirect to sign-up with propertySlug
+      // After sign-up, a draft application will be created and they'll go to dashboard
+      const signUpUrl = propertySlug
+        ? `/sign-up?fromProperty=true&propertySlug=${encodeURIComponent(propertySlug)}`
+        : "/sign-up?fromProperty=true";
+      router.push(signUpUrl);
     }
-  }, [status, propertySlug, router]);
+  }, [status, session?.user?.role, propertySlug, router]);
 
   const onSubmit = async (values: z.infer<typeof applicationSchema>) => {
-    if (!session) {
-      const callbackUrl = propertySlug
-        ? `/application?property=${encodeURIComponent(propertySlug)}`
-        : "/application";
-      router.push(`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+    if (!session || session.user?.role !== "tenant") {
+      const signUpUrl = propertySlug
+        ? `/sign-up?fromProperty=true&propertySlug=${encodeURIComponent(propertySlug)}`
+        : "/sign-up?fromProperty=true";
+      router.push(signUpUrl);
       return;
     }
 
@@ -84,10 +89,10 @@ export default function SubdomainApplicationPage() {
       });
 
       if (res.status === 401) {
-        const callbackUrl = propertySlug
-          ? `/application?property=${encodeURIComponent(propertySlug)}`
-          : "/application";
-        router.push(`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+        const signUpUrl = propertySlug
+          ? `/sign-up?fromProperty=true&propertySlug=${encodeURIComponent(propertySlug)}`
+          : "/sign-up?fromProperty=true";
+        router.push(signUpUrl);
         return;
       }
 
@@ -97,6 +102,8 @@ export default function SubdomainApplicationPage() {
         return;
       }
 
+      // Redirect to tenant dashboard after successful submission
+      router.push("/user/dashboard");
       setSubmitted(true);
     } catch (error) {
       alert("An error occurred. Please try again.");
@@ -105,7 +112,7 @@ export default function SubdomainApplicationPage() {
     }
   };
 
-  if (status === "loading" || status === "unauthenticated") {
+  if (status === "loading" || status === "unauthenticated" || (status === "authenticated" && session?.user?.role !== "tenant")) {
     return (
       <main className="flex-1 w-full flex items-center justify-center py-20">
         <div className="text-center">

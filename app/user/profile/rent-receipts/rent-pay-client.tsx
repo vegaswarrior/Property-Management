@@ -37,7 +37,8 @@ export default function RentPayClient({
       });
 
       if (!res.ok) {
-        setErrorMessage('Failed to start payment. Please try again.');
+        const errorData = await res.json().catch(() => ({})) as { message?: string };
+        setErrorMessage(errorData.message || 'Failed to start payment. Please try again.');
         return;
       }
 

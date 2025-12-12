@@ -13,7 +13,9 @@ import {
   User,
   FileSignature,
   ReceiptText,
-  MessageCircle
+  MessageCircle,
+  AlertCircle,
+  ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -69,6 +71,15 @@ export default async function TenantDashboardPage() {
     take: 3,
   });
 
+  // Get draft applications that need completion
+  const draftApplications = await prisma.rentalApplication.findMany({
+    where: {
+      applicantId: session.user.id,
+      status: 'draft',
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
   const totalPendingRent = pendingRentPayments.reduce(
     (sum, payment) => sum + Number(payment.amount), 
     0
@@ -85,6 +96,47 @@ export default async function TenantDashboardPage() {
             Your tenant dashboard - manage your rental, payments, and maintenance requests.
           </p>
         </div>
+
+        {/* Draft Applications Alert - Show prominently if user has pending applications to complete */}
+        {draftApplications.length > 0 && (
+          <div className='rounded-xl border border-violet-400/50 bg-gradient-to-r from-violet-900/40 to-indigo-900/40 p-5 space-y-4'>
+            <div className='flex items-start gap-3'>
+              <div className='rounded-full bg-violet-500/20 p-2'>
+                <AlertCircle className='h-5 w-5 text-violet-300' />
+              </div>
+              <div className='flex-1'>
+                <h3 className='text-lg font-semibold text-slate-50'>Complete Your Application</h3>
+                <p className='text-sm text-slate-300/90 mt-1'>
+                  You have {draftApplications.length} application{draftApplications.length !== 1 ? 's' : ''} waiting to be completed.
+                </p>
+              </div>
+            </div>
+            <div className='space-y-3'>
+              {draftApplications.map((app) => (
+                <Link 
+                  key={app.id}
+                  href={`/user/profile/application/${app.id}/complete`}
+                  className='flex items-center justify-between rounded-lg border border-white/10 bg-slate-900/60 p-4 hover:border-violet-400/50 hover:bg-slate-900/80 transition-all group'
+                >
+                  <div>
+                    <p className='font-medium text-slate-50'>
+                      {app.propertySlug ? app.propertySlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Property Application'}
+                    </p>
+                    <p className='text-xs text-slate-400 mt-0.5'>
+                      Started {new Date(app.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <Badge variant='outline' className='border-amber-400/50 text-amber-300 bg-amber-500/10'>
+                      Draft
+                    </Badge>
+                    <ArrowRight className='h-4 w-4 text-violet-300 group-hover:translate-x-1 transition-transform' />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quick Stats */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>

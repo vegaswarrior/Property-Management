@@ -115,7 +115,7 @@ export async function getSubdomainRedirectUrl(userRole: string, userId: string):
               return `/${''}admin/overview`;
             }
             case 'tenant':
-              return '/user';
+              return '/user/dashboard';
             default:
               return '/';
           }
@@ -184,7 +184,7 @@ export async function getSubdomainRedirectUrl(userRole: string, userId: string):
           return buildSubdomainUrl(
             tenantLease.unit.property.landlord.subdomain,
             rawApex,
-            '/user',
+            '/user/dashboard',
             host
           );
         }

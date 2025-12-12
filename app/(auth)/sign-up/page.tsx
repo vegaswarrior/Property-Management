@@ -20,9 +20,11 @@ export const metadata: Metadata = {
 const SignUpPage = async (props: {
   searchParams: Promise<{
     callbackUrl: string;
+    fromProperty?: string;
+    propertySlug?: string;
   }>;
 }) => {
-  const { callbackUrl } = await props.searchParams;
+  const { callbackUrl, fromProperty, propertySlug } = await props.searchParams;
 
   const session = await auth();
 
@@ -44,12 +46,18 @@ const SignUpPage = async (props: {
             />
           </Link>
           <CardTitle className='text-center'>Create Account</CardTitle>
-          <CardDescription className='text-center'>
-            Enter your information below to sign up
-          </CardDescription>
+          {fromProperty ? (
+            <CardDescription className='text-center text-emerald-700 bg-emerald-50 rounded-lg p-3 border border-emerald-200'>
+              Thank you for your interest in our property! For a better tenant experience and to properly navigate you, please sign up first. You will be redirected to your dashboard where your application will be waiting for you.
+            </CardDescription>
+          ) : (
+            <CardDescription className='text-center'>
+              Enter your information below to sign up
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className='space-y-4'>
-          <SignUpForm />
+          <SignUpForm propertySlug={propertySlug} />
         </CardContent>
       </Card>
     </div>

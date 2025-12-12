@@ -25,10 +25,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         path: '/',
         secure: process.env.NODE_ENV === 'production',
         // Domain must be a registrable domain without port.
-        // Set only in production to allow cross-subdomain cookies.
-        ...(process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_ROOT_DOMAIN
-          ? { domain: `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}` }
-          : {}),
+        // Set domain to allow cross-subdomain cookies in both dev and prod.
+        domain: process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_ROOT_DOMAIN
+          ? `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`
+          : '.localhost',
       },
     },
     callbackUrl: {
@@ -40,9 +40,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sameSite: 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production',
-        ...(process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_ROOT_DOMAIN
-          ? { domain: `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}` }
-          : {}),
+        domain: process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_ROOT_DOMAIN
+          ? `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`
+          : '.localhost',
       },
     },
     csrfToken: {
@@ -54,9 +54,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sameSite: 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production',
-        ...(process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_ROOT_DOMAIN
-          ? { domain: `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}` }
-          : {}),
+        // Note: __Host- cookies cannot have a domain set in production
+        // Only set domain in development for cross-subdomain support
+        ...(process.env.NODE_ENV !== 'production' ? { domain: '.localhost' } : {}),
       },
     },
   },

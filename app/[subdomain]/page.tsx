@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 import { headers } from 'next/headers';
+import { SubdomainApplyButton } from '@/components/subdomain/apply-button';
 import {
   CheckCircle2,
   CreditCard,
@@ -335,13 +336,7 @@ export default async function SubdomainRootPage({
                             {unitCount} unit{unitCount !== 1 ? 's' : ''} available
                           </p>
                         )}
-                        <Link
-                          href={`/application?property=${encodeURIComponent(property.slug)}`}
-                          className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-6 py-3 text-sm font-semibold text-white hover:bg-violet-600 transition-all hover:scale-105 group"
-                        >
-                          Apply Now - No Fees
-                          <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                        </Link>
+                        <SubdomainApplyButton propertySlug={property.slug} />
                       </div>
                     </div>
                   );

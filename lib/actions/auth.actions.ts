@@ -5,8 +5,14 @@ import { formatError } from '../utils';
 import { sendVerificationEmail, sendPasswordResetEmail } from '@/email';
 import { hash } from '../encrypt';
 import { randomBytes } from 'crypto';
+import { signOut } from '@/auth';
 
 const generateToken = () => randomBytes(32).toString('hex');
+
+export async function logout(redirectTo?: string) {
+  // Use NextAuth's server signOut to ensure cookies/handlers align with app router
+  await signOut({ redirectTo: redirectTo ?? '/' });
+}
 
 const getVerificationEmailLink = (token: string) =>
   `${process.env.NEXT_PUBLIC_SERVER_URL}/verify-email?token=${token}`;

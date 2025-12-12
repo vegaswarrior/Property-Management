@@ -1,7 +1,5 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getAllProducts, deleteProduct } from '@/lib/actions/product.actions';
-import ProductPromoDialog from '@/components/admin/product-promo-dialog';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,38 +11,55 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import Pagination from '@/components/shared/pagination';
-import DeleteDialog from '@/components/shared/delete-dialog';
 import { requireAdmin } from '@/lib/auth-guard';
+import { prisma } from '@/db/prisma';
+import { getOrCreateCurrentLandlord } from '@/lib/actions/landlord.actions';
 
-interface Product {
-  id: string;
-  name: string;
-  price: number | string;
-  category: string;
-  stock: number;
-  images: string[];
-}
+
+const PAGE_SIZE = 10;
 
 const AdminProductsPage = async (props: {
   searchParams: Promise<{
     page: string;
     query: string;
-    category: string;
   }>;
 }) => {
   await requireAdmin();
 
-  const searchParams = await props.searchParams;
+  const landlordResult = await getOrCreateCurrentLandlord();
+  if (!landlordResult.success) {
+    throw new Error(landlordResult.message || 'Unable to determine landlord');
+  }
+  const landlordId = landlordResult.landlord.id;
 
+  const searchParams = await props.searchParams;
   const page = Number(searchParams.page) || 1;
   const searchText = searchParams.query || '';
-  const category = searchParams.category || '';
 
-  const products = await getAllProducts({
-    query: searchText,
-    page,
-    category,
-  });
+  const where = {
+    landlordId,
+    ...(searchText && searchText !== 'all'
+      ? { name: { contains: searchText, mode: 'insensitive' as const } }
+      : {}),
+  };
+
+  const [properties, totalCount] = await Promise.all([
+    prisma.property.findMany({
+      where,
+      include: {
+        units: {
+          where: { isAvailable: true },
+          select: { id: true, rentAmount: true, images: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.property.count({ where }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <div className='w-full px-4 py-8 md:px-0 space-y-4'>
@@ -72,57 +87,65 @@ const AdminProductsPage = async (props: {
 
         <div className='overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0'>
           <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>PHOTO</TableHead>
-            <TableHead>PROPERTY</TableHead>
-            <TableHead className='text-right'>MONTHLY RENT</TableHead>
-            <TableHead>TYPE</TableHead>
-            <TableHead>AVAILABLE UNITS</TableHead>
-            <TableHead>MARKETING</TableHead>
-            <TableHead className='w-[100px]'>ACTIONS</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {products.data.map((product: Product) => (
-            <TableRow key={product.id}>
-              <TableCell>
-                {product.images && product.images.length > 0 ? (
-                  <Image
-                    src={product.images[0]}
-                    alt={product.name}
-                    width={80}
-                    height={80}
-                    className='rounded-lg object-cover'
-                  />
-                ) : (
-                  <div className='w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 text-sm'>
-                    No Image
-                  </div>
-                )}
-              </TableCell>
-              <TableCell>{product.name}</TableCell>
-              <TableCell className='text-right'>
-                {formatCurrency(product.price)}
-              </TableCell>
-              <TableCell>{product.category}</TableCell>
-              <TableCell>{product.stock}</TableCell>
-              <TableCell>
-                <ProductPromoDialog productId={product.id} />
-              </TableCell>
-              <TableCell className='flex gap-1'>
-                <Button asChild variant='outline' size='sm'>
-                  <Link href={`/admin/products/${product.id}`}>Edit</Link>
-                </Button>
-                <DeleteDialog id={product.id} action={deleteProduct} />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>PHOTO</TableHead>
+                <TableHead>PROPERTY</TableHead>
+                <TableHead className='text-right'>MONTHLY RENT</TableHead>
+                <TableHead>TYPE</TableHead>
+                <TableHead>AVAILABLE UNITS</TableHead>
+                <TableHead className='w-[100px]'>ACTIONS</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {properties.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className='text-center text-slate-400 py-8'>
+                    No properties found. Add your first property to get started.
+                  </TableCell>
+                </TableRow>
+              )}
+              {properties.map((property) => {
+                const firstImage = property.units[0]?.images?.[0];
+                const lowestRent = property.units.length > 0
+                  ? Math.min(...property.units.map(u => Number(u.rentAmount)))
+                  : 0;
+                return (
+                  <TableRow key={property.id}>
+                    <TableCell>
+                      {firstImage ? (
+                        <Image
+                          src={firstImage}
+                          alt={property.name}
+                          width={80}
+                          height={80}
+                          className='rounded-lg object-cover'
+                        />
+                      ) : (
+                        <div className='w-20 h-20 bg-slate-800 rounded-lg flex items-center justify-center text-slate-500 text-sm'>
+                          No Image
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className='text-slate-200'>{property.name}</TableCell>
+                    <TableCell className='text-right text-slate-200'>
+                      {lowestRent > 0 ? formatCurrency(lowestRent) : '—'}
+                    </TableCell>
+                    <TableCell className='text-slate-300'>{property.type}</TableCell>
+                    <TableCell className='text-slate-300'>{property.units.length}</TableCell>
+                    <TableCell className='flex gap-1'>
+                      <Button asChild variant='outline' size='sm'>
+                        <Link href={`/admin/products/${property.id}`}>Edit</Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
-        {products.totalPages > 1 && (
-          <Pagination page={page} totalPages={products.totalPages} />
+        {totalPages > 1 && (
+          <Pagination page={page} totalPages={totalPages} />
         )}
       </div>
     </div>

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useCallback, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent } from '@/components/ui/card';
 import ProductPrice from '@/components/shared/product/product-price';
 import ProductImages from '@/components/shared/product/product-images';
@@ -30,6 +31,7 @@ export default function ProductDetailClient({
 }) {
   console.log('PRODUCT DATA:', product); // Debug: full product object
 
+  const { data: session } = useSession();
   const baseImages = useMemo(() => product.images || [], [product.images]);
   const [activeImage, setActiveImage] = useState<string>(baseImages[0] || '');
 
@@ -115,7 +117,15 @@ export default function ProductDetailClient({
               <button
                 className="w-full rounded-full bg-slate-900 text-white text-sm py-2.5 hover:bg-slate-800 transition-colors"
                 onClick={() => {
-                  window.location.href = `/application?property=${encodeURIComponent(product.slug)}`;
+                  // Check if user is authenticated and is a tenant
+                  if (!session || session.user?.role !== 'tenant') {
+                    // Redirect to sign-up with callback to application
+                    const callbackUrl = `/application?property=${encodeURIComponent(product.slug)}`;
+                    window.location.href = `/sign-up?callbackUrl=${encodeURIComponent(callbackUrl)}&fromProperty=true`;
+                  } else {
+                    // User is a tenant, go directly to application
+                    window.location.href = `/application?property=${encodeURIComponent(product.slug)}`;
+                  }
                 }}
               >
                 Start Application

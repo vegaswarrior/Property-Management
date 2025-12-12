@@ -10,7 +10,11 @@ import { useFormStatus } from 'react-dom';
 import { signUpUser } from '@/lib/actions/user.actions';
 import { useSearchParams } from 'next/navigation';
 
-const SignUpForm = () => {
+interface SignUpFormProps {
+  propertySlug?: string;
+}
+
+const SignUpForm = ({ propertySlug }: SignUpFormProps) => {
   const [data, action] = useActionState(signUpUser, {
     success: false,
     message: '',
@@ -32,6 +36,7 @@ const SignUpForm = () => {
   return (
     <form action={action}>
       <input type='hidden' name='callbackUrl' value={callbackUrl} />
+      {propertySlug && <input type='hidden' name='propertySlug' value={propertySlug} />}
       <div className='space-y-6'>
         <div className='space-y-2'>
           <p className='text-xs font-semibold uppercase tracking-[0.2em] text-slate-500'>

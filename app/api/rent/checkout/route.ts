@@ -16,32 +16,34 @@ export async function POST(req: NextRequest) {
   const apex = process.env.NEXT_PUBLIC_ROOT_DOMAIN || '';
 
   const bareHost = host.split(':')[0].toLowerCase();
-  const apexLower = apex.toLowerCase();
+  const apexLower = apex.split(':')[0].toLowerCase(); // Strip port from apex too
 
   let landlordId: string | null = null;
+  let subdomain: string | null = null;
 
-  if (apexLower && bareHost.endsWith(`.${apexLower}`) && bareHost !== apexLower) {
-    const subdomain = bareHost.slice(0, bareHost.length - apexLower.length - 1);
-
-    if (subdomain) {
-      const landlordResult = await getLandlordBySubdomain(subdomain);
-
-      if (!landlordResult.success) {
-        return NextResponse.json(
-          { message: landlordResult.message || 'Landlord not found for this subdomain.' },
-          { status: 404 }
-        );
-      }
-
-      landlordId = landlordResult.landlord.id;
-    }
+  // Handle localhost subdomains (e.g., subdomain.localhost:3000)
+  if (bareHost.endsWith('.localhost')) {
+    subdomain = bareHost.slice(0, bareHost.length - '.localhost'.length);
+  }
+  // Handle production subdomains (e.g., subdomain.domain.com)
+  else if (apexLower && bareHost.endsWith(`.${apexLower}`) && bareHost !== apexLower) {
+    subdomain = bareHost.slice(0, bareHost.length - apexLower.length - 1);
   }
 
-  if (!landlordId) {
-    return NextResponse.json(
-      { message: 'Missing or invalid landlord context for this request.' },
-      { status: 400 }
-    );
+  console.log('[rent/checkout] host:', host, 'bareHost:', bareHost, 'subdomain:', subdomain);
+
+  if (subdomain) {
+    const landlordResult = await getLandlordBySubdomain(subdomain);
+    console.log('[rent/checkout] landlordResult:', landlordResult);
+
+    if (!landlordResult.success) {
+      return NextResponse.json(
+        { message: landlordResult.message || 'Landlord not found for this subdomain.' },
+        { status: 404 }
+      );
+    }
+
+    landlordId = landlordResult.landlord.id;
   }
 
   const body = await req.json().catch(() => null) as
@@ -52,11 +54,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'No rent payments specified' }, { status: 400 });
   }
 
-  const rentPayments = await prisma.rentPayment.findMany({
+  // Build the query - if we have a landlordId from subdomain, filter by it
+  // Otherwise, just verify the rent payments belong to the tenant
+  const rentPaymentQuery: Parameters<typeof prisma.rentPayment.findMany>[0] = {
     where: {
       id: { in: body.rentPaymentIds },
       tenantId: session.user.id as string,
       status: 'pending',
+    },
+    include: {
+      lease: {
+        include: {
+          unit: {
+            include: {
+              property: true,
+            },
+          },
+        },
+      },
+    },
+  };
+
+  // If we have landlordId from subdomain, add that filter
+  if (landlordId) {
+    rentPaymentQuery.where = {
+      ...rentPaymentQuery.where,
       lease: {
         unit: {
           property: {
@@ -64,11 +86,25 @@ export async function POST(req: NextRequest) {
           },
         },
       },
-    },
-  });
+    };
+  }
+
+  const rentPayments = await prisma.rentPayment.findMany(rentPaymentQuery);
 
   if (rentPayments.length === 0) {
     return NextResponse.json({ message: 'No pending rent payments found' }, { status: 400 });
+  }
+
+  // If we didn't have a landlordId from subdomain, get it from the first rent payment
+  if (!landlordId) {
+    const firstPayment = rentPayments[0] as typeof rentPayments[0] & {
+      lease: { unit: { property: { landlordId: string } } };
+    };
+    landlordId = firstPayment.lease?.unit?.property?.landlordId || null;
+  }
+
+  if (!landlordId) {
+    return NextResponse.json({ message: 'Could not determine landlord for payment' }, { status: 400 });
   }
 
   const totalAmount = rentPayments.reduce((sum, p) => {
@@ -108,17 +144,13 @@ export async function POST(req: NextRequest) {
       convenienceFee: convenienceFee.toString(),
       maxConvenienceFee: getConvenienceFeeInCents('card').toString(), // Max possible fee
     },
-    // Enable multiple payment methods including wallets
-    payment_method_types: ['card', 'us_bank_account', 'link'],
-    // Enable automatic payment methods (Apple Pay, Google Pay, etc.)
+    // Use automatic_payment_methods for card, ACH, Link, Apple Pay, Google Pay
     automatic_payment_methods: {
       enabled: true,
       allow_redirects: 'never', // Keep everything in-page
     },
     // ACH requires customer email for mandate
     receipt_email: session.user.email || undefined,
-    // Enable setup for future recurring payments
-    setup_future_usage: 'off_session', // Allows saving payment method for recurring
   };
 
   // If landlord has Stripe Connect account, charge them directly with application fee
@@ -132,17 +164,23 @@ export async function POST(req: NextRequest) {
     };
   }
 
-  const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
+  try {
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
 
-  await prisma.rentPayment.updateMany({
-    where: { id: { in: rentPayments.map((p) => p.id) } },
-    data: { stripePaymentIntentId: paymentIntent.id },
-  });
+    await prisma.rentPayment.updateMany({
+      where: { id: { in: rentPayments.map((p) => p.id) } },
+      data: { stripePaymentIntentId: paymentIntent.id },
+    });
 
-  return NextResponse.json({
-    clientSecret: paymentIntent.client_secret,
-    convenienceFee: convenienceFee / 100, // Return as dollars
-    rentAmount: totalAmount,
-    totalAmount: totalWithFee / 100,
-  });
+    return NextResponse.json({
+      clientSecret: paymentIntent.client_secret,
+      convenienceFee: convenienceFee / 100, // Return as dollars
+      rentAmount: totalAmount,
+      totalAmount: totalWithFee / 100,
+    });
+  } catch (error) {
+    console.error('Stripe payment intent creation failed:', error);
+    const message = error instanceof Error ? error.message : 'Payment initialization failed';
+    return NextResponse.json({ message }, { status: 500 });
+  }
 }

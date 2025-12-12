@@ -15,22 +15,29 @@ export async function POST(req: NextRequest) {
     const apexLower = apex.toLowerCase();
 
     let landlordId: string | null = null;
+    let subdomain: string | null = null;
 
+    // Production-style subdomain: subdomain.apex
     if (apexLower && bareHost.endsWith(`.${apexLower}`) && bareHost !== apexLower) {
-      const subdomain = bareHost.slice(0, bareHost.length - apexLower.length - 1);
+      subdomain = bareHost.slice(0, bareHost.length - apexLower.length - 1);
+    }
 
-      if (subdomain) {
-        const landlordResult = await getLandlordBySubdomain(subdomain);
+    // Localhost-style subdomain: subdomain.localhost
+    if (!subdomain && bareHost.endsWith('.localhost') && bareHost !== 'localhost') {
+      subdomain = bareHost.slice(0, -'.localhost'.length);
+    }
 
-        if (!landlordResult.success) {
-          return NextResponse.json(
-            { success: false, message: landlordResult.message || "Landlord not found for this subdomain." },
-            { status: 404 }
-          );
-        }
+    if (subdomain) {
+      const landlordResult = await getLandlordBySubdomain(subdomain);
 
-        landlordId = landlordResult.landlord.id;
+      if (!landlordResult.success) {
+        return NextResponse.json(
+          { success: false, message: landlordResult.message || "Landlord not found for this subdomain." },
+          { status: 404 }
+        );
       }
+
+      landlordId = landlordResult.landlord.id;
     }
 
     if (!landlordId) {

@@ -1,0 +1,37 @@
+"use client";
+
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+
+interface SubdomainApplyButtonProps {
+  propertySlug: string;
+}
+
+export function SubdomainApplyButton({ propertySlug }: SubdomainApplyButtonProps) {
+  const { data: session } = useSession();
+
+  // If user is a tenant, send them straight to the application
+  if (session?.user?.role === "tenant") {
+    return (
+      <Link
+        href={`/application?property=${encodeURIComponent(propertySlug)}`}
+        className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-6 py-3 text-sm font-semibold text-white hover:bg-violet-600 transition-all hover:scale-105 group"
+      >
+        Apply Now - No Fees
+      </Link>
+    );
+  }
+
+  // If not logged in or not a tenant (landlord, property_manager, or no account yet),
+  // send them to sign-up with special message flag, property slug, and redirect to dashboard after
+  const signUpHref = `/sign-up?fromProperty=true&propertySlug=${encodeURIComponent(propertySlug)}`;
+
+  return (
+    <Link
+      href={signUpHref}
+      className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-6 py-3 text-sm font-semibold text-white hover:bg-violet-600 transition-all hover:scale-105 group"
+    >
+      Apply Now - No Fees
+    </Link>
+  );
+}

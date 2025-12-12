@@ -110,7 +110,7 @@ export async function signUpUser(prevState: unknown, formData: FormData) {
         ? (rawRole as string)
         : 'tenant';
 
-    await prisma.user.create({
+    const createdUser = await prisma.user.create({
       data: {
         name: user.name,
         email: user.email,
@@ -127,26 +127,41 @@ export async function signUpUser(prevState: unknown, formData: FormData) {
       redirect: false,
     });
 
+    // Check if user came from a property application flow
+    const propertySlug = formData.get('propertySlug');
+    
+    // If tenant signed up from a property, create a draft application for them
+    if (roleValue === 'tenant' && propertySlug && typeof propertySlug === 'string' && propertySlug.trim().length > 0) {
+      // Find an available unit for this property to link to the application
+      const availableUnit = await prisma.unit.findFirst({
+        where: {
+          isAvailable: true,
+          property: {
+            slug: propertySlug.trim(),
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      // Create a draft application so it's waiting for them in their dashboard
+      await prisma.rentalApplication.create({
+        data: {
+          fullName: user.name,
+          email: user.email,
+          propertySlug: propertySlug.trim(),
+          unitId: availableUnit?.id ?? null,
+          status: 'draft',
+          applicantId: createdUser.id,
+        },
+      });
+      
+      // Redirect directly to tenant dashboard where the application is waiting
+      redirect('/user/dashboard');
+    }
+
     const rawCallbackUrl = formData.get('callbackUrl');
     if (rawCallbackUrl && typeof rawCallbackUrl === 'string' && rawCallbackUrl.trim().length > 0) {
       redirect(rawCallbackUrl);
-    }
-
-    // Get the created user to get their ID for subdomain redirect logic
-    const createdUser = await prisma.user.findUnique({
-      where: { email: user.email },
-      select: { id: true },
-    });
-
-    if (!createdUser) {
-      // Fallback if user lookup fails
-      if (roleValue === 'tenant') {
-        redirect('/user/profile');
-      } else if (roleValue === 'landlord' || roleValue === 'property_manager') {
-        redirect('/onboarding/role');
-      } else {
-        redirect('/');
-      }
     }
 
     // For sign-up, use subdomain redirect logic but send to onboarding for landlords
