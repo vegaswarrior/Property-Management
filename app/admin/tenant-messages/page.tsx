@@ -125,34 +125,36 @@ export default function TenantMessagesPage() {
   }, []);
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Tenant Communications</h2>
-        <div className="flex items-center space-x-2">
-          <div className="relative">
+    <div className="flex-1 space-y-4 p-4 pt-6 sm:p-8 sm:pt-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Tenant Communications</h2>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+          <div className="relative w-full sm:w-[280px] md:w-[320px]">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search messages..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 w-[300px]"
+              className="pl-8 w-full"
             />
           </div>
-          <Button onClick={() => setShowBulk(!showBulk)} variant="outline">
-            <Megaphone className="mr-2 h-4 w-4" />
-            Bulk Message
-          </Button>
-          <Button onClick={() => setShowCompose(!showCompose)}>
-            <MessageCircle className="mr-2 h-4 w-4" />
-            Compose
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setShowBulk(!showBulk)} variant="outline" className="flex-1 sm:flex-none">
+              <Megaphone className="mr-2 h-4 w-4" />
+              Bulk
+            </Button>
+            <Button onClick={() => setShowCompose(!showCompose)} className="flex-1 sm:flex-none">
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Compose
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         {/* Messages List */}
         <Card className="lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Tenant Messages
@@ -161,8 +163,8 @@ export default function TenantMessagesPage() {
               Direct communications with your tenants
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[600px] pr-4">
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <ScrollArea className="h-[320px] sm:h-[420px] lg:h-[480px] pr-4">
               {loading ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="text-sm text-muted-foreground">Loading messages...</div>
@@ -191,7 +193,7 @@ export default function TenantMessagesPage() {
                     return (
                       <div
                         key={message.id}
-                        className={`p-4 rounded-lg border cursor-pointer transition-colors hover:bg-accent ${
+                        className={`p-3 sm:p-4 rounded-lg border cursor-pointer transition-colors hover:bg-accent ${
                           selectedThread?.id === message.id ? 'bg-accent border-primary' : ''
                         }`}
                         onClick={() => setSelectedThread(message)}
@@ -229,13 +231,13 @@ export default function TenantMessagesPage() {
         <div className="space-y-4">
           {showCompose ? (
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 sm:p-6">
                 <CardTitle>Compose Message</CardTitle>
                 <CardDescription>
                   Send a direct message to a tenant
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Recipient Email</label>
                   <Input
@@ -258,7 +260,7 @@ export default function TenantMessagesPage() {
                     placeholder="Type your message here..."
                     value={newMessage.content}
                     onChange={(e) => setNewMessage(prev => ({ ...prev, content: e.target.value }))}
-                    rows={6}
+                    rows={4}
                   />
                 </div>
                 <div className="flex gap-2">
@@ -277,7 +279,7 @@ export default function TenantMessagesPage() {
             </Card>
           ) : showBulk ? (
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 sm:p-6">
                 <CardTitle className="flex items-center gap-2">
                   <Megaphone className="h-5 w-5" />
                   Bulk Message
@@ -286,7 +288,7 @@ export default function TenantMessagesPage() {
                   Send a message to all tenants
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Message Type</label>
                   <select
@@ -314,7 +316,7 @@ export default function TenantMessagesPage() {
                     placeholder="Type your message to all tenants here..."
                     value={bulkMessage.message}
                     onChange={(e) => setBulkMessage(prev => ({ ...prev, message: e.target.value }))}
-                    rows={6}
+                    rows={4}
                   />
                 </div>
                 <div className="bg-blue-50 p-3 rounded-lg">
@@ -338,25 +340,29 @@ export default function TenantMessagesPage() {
             </Card>
           ) : selectedThread ? (
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 sm:p-6">
                 <CardTitle className="truncate">{selectedThread.thread.subject || 'No Subject'}</CardTitle>
                 <CardDescription>
                   Conversation with {selectedThread.thread.participants.map(p => p.user.name).join(', ')}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
                 <div className="space-y-4">
-                  {selectedThread.thread.messages.map((msg) => (
-                    <div key={msg.id} className="p-3 rounded-lg bg-muted">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-sm">{msg.senderName || 'Unknown'}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {msg.createdAt ? formatDistanceToNow(msg.createdAt, { addSuffix: true }) : 'Unknown time'}
-                        </span>
-                      </div>
-                      <p className="text-sm">{msg.content || 'No content'}</p>
+                  <ScrollArea className="h-[260px] sm:h-[320px] pr-4">
+                    <div className="space-y-3">
+                      {selectedThread.thread.messages.map((msg) => (
+                        <div key={msg.id} className="p-3 rounded-lg bg-muted">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-medium text-sm">{msg.senderName || 'Unknown'}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {msg.createdAt ? formatDistanceToNow(msg.createdAt, { addSuffix: true }) : 'Unknown time'}
+                            </span>
+                          </div>
+                          <p className="text-sm">{msg.content || 'No content'}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </ScrollArea>
                   
                   <div className="pt-4 border-t">
                     <p className="text-sm text-muted-foreground mb-2">
@@ -371,7 +377,7 @@ export default function TenantMessagesPage() {
             </Card>
           ) : (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center h-64 text-center">
+              <CardContent className="flex flex-col items-center justify-center h-44 sm:h-56 text-center">
                 <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="font-medium mb-2">Communications Center</h3>
                 <p className="text-sm text-muted-foreground mb-4">
@@ -401,10 +407,10 @@ export default function TenantMessagesPage() {
 
           {/* Quick Stats */}
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <CardTitle className="text-lg">Communication Stats</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Total Messages</span>

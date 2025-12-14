@@ -1,16 +1,15 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs/index';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Users, 
-  Home, 
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Users,
+  Home,
   Download,
   Calculator,
   FileText,
@@ -19,7 +18,8 @@ import {
   PieChart,
   BarChart3,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  PenTool
 } from 'lucide-react';
 
 interface AnalyticsData {
@@ -52,9 +52,19 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ landlordId }) =
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [qbConnected, setQbConnected] = useState<boolean>(false);
+  const [qbCompanyName, setQbCompanyName] = useState<string | null>(null);
+  const [qbLoading, setQbLoading] = useState<boolean>(false);
+  const [dsConnected, setDsConnected] = useState<boolean>(false);
+  const [dsLoading, setDsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     fetchAnalyticsData();
+  }, [landlordId]);
+
+  useEffect(() => {
+    fetchQuickBooksStatus();
+    fetchDocuSignStatus();
   }, [landlordId]);
 
   const fetchAnalyticsData = async () => {
@@ -69,6 +79,37 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ landlordId }) =
       console.error('Failed to fetch analytics:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchQuickBooksStatus = async () => {
+    try {
+      const res = await fetch(`/api/integrations/quickbooks/status?landlordId=${landlordId}`);
+      const json = await res.json();
+      if (json?.success) {
+        const connected = Boolean(json?.data?.connected);
+        setQbConnected(connected);
+        const companyName =
+          json?.data?.companyInfo?.CompanyInfo?.CompanyName ||
+          json?.data?.companyInfo?.CompanyInfo?.LegalName ||
+          null;
+        setQbCompanyName(companyName);
+      }
+    } catch (e) {
+      console.error('Failed to fetch QuickBooks status:', e);
+    }
+  };
+
+  const fetchDocuSignStatus = async () => {
+    try {
+      const res = await fetch(`/api/integrations/docusign/status?landlordId=${landlordId}`);
+      const json = await res.json();
+      if (json?.success) {
+        const connected = Boolean(json?.data?.connected);
+        setDsConnected(connected);
+      }
+    } catch (e) {
+      console.error('Failed to fetch DocuSign status:', e);
     }
   };
 
@@ -91,21 +132,55 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ landlordId }) =
 
   const syncWithQuickBooks = async () => {
     try {
+      setQbLoading(true);
+
+      if (!qbConnected) {
+        window.location.href = `/api/integrations/quickbooks/connect?landlordId=${landlordId}`;
+        return;
+      }
+
       const response = await fetch('/api/integrations/quickbooks/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ landlordId })
+        body: JSON.stringify({ landlordId }),
       });
       const result = await response.json();
-      
+
       if (result.success) {
-        alert('Successfully synced with QuickBooks!');
+        await fetchQuickBooksStatus();
+        alert('QuickBooks connection verified.');
       } else {
+        if (result.code === 'QUICKBOOKS_NOT_CONNECTED') {
+          window.location.href = `/api/integrations/quickbooks/connect?landlordId=${landlordId}`;
+          return;
+        }
         alert('Sync failed: ' + result.message);
       }
     } catch (error) {
       console.error('QuickBooks sync failed:', error);
       alert('QuickBooks sync failed');
+    } finally {
+      setQbLoading(false);
+    }
+  };
+
+  const connectDocuSign = async () => {
+    try {
+      setDsLoading(true);
+
+      if (!dsConnected) {
+        window.location.href = `/api/docusign/connect?landlordId=${landlordId}`;
+        return;
+      }
+
+      // If already connected, verify the connection
+      await fetchDocuSignStatus();
+      alert('DocuSign connection verified.');
+    } catch (error) {
+      console.error('DocuSign connection failed:', error);
+      alert('DocuSign connection failed');
+    } finally {
+      setDsLoading(false);
     }
   };
 
@@ -223,12 +298,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ landlordId }) =
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
-          <TabsList value={activeTab} onValueChange={setActiveTab} className='grid w-full sm:w-auto grid-cols-2 lg:grid-cols-5'>
-            <TabsTrigger value={activeTab} onValueChange={setActiveTab} triggerValue='overview'>Overview</TabsTrigger>
-            <TabsTrigger value={activeTab} onValueChange={setActiveTab} triggerValue='properties'>Properties</TabsTrigger>
-            <TabsTrigger value={activeTab} onValueChange={setActiveTab} triggerValue='roi'>ROI Analysis</TabsTrigger>
-            <TabsTrigger value={activeTab} onValueChange={setActiveTab} triggerValue='market'>Market</TabsTrigger>
-            <TabsTrigger value={activeTab} onValueChange={setActiveTab} triggerValue='integrations'>Integrations</TabsTrigger>
+          <TabsList className='grid w-full sm:w-auto grid-cols-2 lg:grid-cols-5'>
+            <TabsTrigger triggerValue='overview'>Overview</TabsTrigger>
+            <TabsTrigger triggerValue='properties'>Properties</TabsTrigger>
+            <TabsTrigger triggerValue='roi'>ROI Analysis</TabsTrigger>
+            <TabsTrigger triggerValue='market'>Market</TabsTrigger>
+            <TabsTrigger triggerValue='integrations'>Integrations</TabsTrigger>
           </TabsList>
 
           <div className='flex gap-2'>
@@ -243,7 +318,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ landlordId }) =
           </div>
         </div>
 
-        <TabsContent value='overview' contentValue='overview' className='space-y-6'>
+        <TabsContent contentValue='overview' className='space-y-6'>
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
             <Card>
               <CardHeader>
@@ -287,7 +362,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ landlordId }) =
           </div>
         </TabsContent>
 
-        <TabsContent value='properties' contentValue='properties' className='space-y-6'>
+        <TabsContent contentValue='properties' className='space-y-6'>
           <Card>
             <CardHeader>
               <CardTitle>Property Performance</CardTitle>
@@ -330,7 +405,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ landlordId }) =
           </Card>
         </TabsContent>
 
-        <TabsContent value='roi' contentValue='roi' className='space-y-6'>
+        <TabsContent contentValue='roi' className='space-y-6'>
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
             <Card>
               <CardHeader>
@@ -374,7 +449,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ landlordId }) =
           </div>
         </TabsContent>
 
-        <TabsContent value='market' contentValue='market' className='space-y-6'>
+        <TabsContent contentValue='market' className='space-y-6'>
           <Card>
             <CardHeader>
               <CardTitle>Market Comparison</CardTitle>
@@ -402,7 +477,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ landlordId }) =
           </Card>
         </TabsContent>
 
-        <TabsContent value='integrations' contentValue='integrations' className='space-y-6'>
+        <TabsContent contentValue='integrations' className='space-y-6'>
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
             <Card>
               <CardHeader>
@@ -415,16 +490,45 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ landlordId }) =
               <CardContent className='space-y-4'>
                 <div className='flex items-center justify-between'>
                   <span className='text-sm'>Connection Status:</span>
-                  <Badge variant='outline'>Not Connected</Badge>
+                  <Badge variant='outline'>
+                    {qbConnected ? `Connected${qbCompanyName ? ` (${qbCompanyName})` : ''}` : 'Not Connected'}
+                  </Badge>
                 </div>
                 <div className='space-y-2 text-sm text-slate-600'>
                   <p>• Sync rent payments and expenses</p>
                   <p>• Automatic categorization</p>
                   <p>• Real-time financial tracking</p>
                 </div>
-                <Button className='w-full' onClick={syncWithQuickBooks}>
+                <Button className='w-full' onClick={syncWithQuickBooks} disabled={qbLoading}>
                   <CreditCard className='h-4 w-4 mr-2' />
-                  Connect QuickBooks
+                  {qbConnected ? 'Verify Connection' : 'Connect QuickBooks'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className='flex items-center gap-2'>
+                  <PenTool className='h-5 w-5' />
+                  DocuSign Integration
+                </CardTitle>
+                <CardDescription>Send and sign lease agreements electronically</CardDescription>
+              </CardHeader>
+              <CardContent className='space-y-4'>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm'>Connection Status:</span>
+                  <Badge variant='outline'>
+                    {dsConnected ? 'Connected' : 'Not Connected'}
+                  </Badge>
+                </div>
+                <div className='space-y-2 text-sm text-slate-600'>
+                  <p>• Send lease agreements for electronic signature</p>
+                  <p>• Track signing status and completion</p>
+                  <p>• Legal compliance and audit trails</p>
+                </div>
+                <Button className='w-full' onClick={connectDocuSign} disabled={dsLoading}>
+                  <PenTool className='h-4 w-4 mr-2' />
+                  {dsConnected ? 'Verify Connection' : 'Connect DocuSign'}
                 </Button>
               </CardContent>
             </Card>

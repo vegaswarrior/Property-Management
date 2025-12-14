@@ -3,6 +3,19 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
+const TabsContext = React.createContext<{
+  value: string
+  onValueChange: (value: string) => void
+} | null>(null)
+
+const useTabsContext = () => {
+  const context = React.useContext(TabsContext)
+  if (!context) {
+    throw new Error('Tabs components must be used within a Tabs provider')
+  }
+  return context
+}
+
 const Tabs = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & {
@@ -10,28 +23,22 @@ const Tabs = React.forwardRef<
     onValueChange: (value: string) => void
   }
 >(({ className, value, onValueChange, children, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("w-full", className)}
-    {...props}
-  >
-    {React.Children.map(children, child => {
-      if (React.isValidElement(child)) {
-        return React.cloneElement(child, { value, onValueChange } as any)
-      }
-      return child
-    })}
-  </div>
+  <TabsContext.Provider value={{ value, onValueChange }}>
+    <div
+      ref={ref}
+      className={cn("w-full", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  </TabsContext.Provider>
 ))
 Tabs.displayName = "Tabs"
 
 const TabsList = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & {
-    value?: string
-    onValueChange?: (value: string) => void
-  }
->(({ className, value, onValueChange, children, ...props }, ref) => (
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, children, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
@@ -40,12 +47,7 @@ const TabsList = React.forwardRef<
     )}
     {...props}
   >
-    {React.Children.map(children, child => {
-      if (React.isValidElement(child)) {
-        return React.cloneElement(child, { value, onValueChange } as any)
-      }
-      return child
-    })}
+    {children}
   </div>
 ))
 TabsList.displayName = "TabsList"
@@ -53,11 +55,10 @@ TabsList.displayName = "TabsList"
 const TabsTrigger = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    value?: string
-    onValueChange?: (value: string) => void
     triggerValue: string
   }
->(({ className, value, onValueChange, triggerValue, children, ...props }, ref) => {
+>(({ className, triggerValue, children, ...props }, ref) => {
+  const { value, onValueChange } = useTabsContext()
   const isActive = value === triggerValue
   
   return (
@@ -82,10 +83,10 @@ TabsTrigger.displayName = "TabsTrigger"
 const TabsContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & {
-    value?: string
     contentValue: string
   }
->(({ className, value, contentValue, children, ...props }, ref) => {
+>(({ className, contentValue, children, ...props }, ref) => {
+  const { value } = useTabsContext()
   if (value !== contentValue) {
     return null
   }
@@ -105,4 +106,4 @@ const TabsContent = React.forwardRef<
 })
 TabsContent.displayName = "TabsContent"
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsList, TabsTrigger, TabsContent, useTabsContext }

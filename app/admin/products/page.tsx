@@ -14,6 +14,7 @@ import Pagination from '@/components/shared/pagination';
 import { requireAdmin } from '@/lib/auth-guard';
 import { prisma } from '@/db/prisma';
 import { getOrCreateCurrentLandlord } from '@/lib/actions/landlord.actions';
+import PropertyActions from '@/components/admin/property-actions';
 
 
 const PAGE_SIZE = 10;
@@ -127,7 +128,14 @@ const AdminProductsPage = async (props: {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className='text-slate-200'>{property.name}</TableCell>
+                    <TableCell className='text-slate-200'>
+                      <Link
+                        href={`/admin/products/${property.id}/details`}
+                        className='hover:underline'
+                      >
+                        {property.name}
+                      </Link>
+                    </TableCell>
                     <TableCell className='text-right text-slate-200'>
                       {lowestRent > 0 ? formatCurrency(lowestRent) : '—'}
                     </TableCell>
@@ -137,6 +145,10 @@ const AdminProductsPage = async (props: {
                       <Button asChild variant='outline' size='sm'>
                         <Link href={`/admin/products/${property.id}`}>Edit</Link>
                       </Button>
+                      <Button asChild variant='secondary' size='sm'>
+                        <Link href={`/admin/products/${property.id}/details`}>View</Link>
+                      </Button>
+                      <PropertyActions propertyId={property.id} />
                     </TableCell>
                   </TableRow>
                 );

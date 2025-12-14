@@ -363,13 +363,44 @@ export async function updateProduct(data: z.infer<typeof updateProductSchema>) {
 
     if (!productExists) throw new Error('Product not found');
 
-    // Update product and optionally refresh variants
+    // Update product, property, and units to stay in sync
     await prisma.$transaction(async (tx) => {
       // Extract only Product model fields, excluding sizeIds and colorIds (variant metadata)
       const { sizeIds, colorIds, ...productData } = product;
       void colorIds;
       
-      await tx.product.update({ where: { id: product.id }, data: productData });
+      const updatedProduct = await tx.product.update({ where: { id: product.id }, data: productData });
+
+      // Keep Property aligned with product fields (created during createProduct)
+      await tx.property.updateMany({
+        where: { slug: productExists.slug },
+        data: {
+          name: product.name,
+          slug: product.slug,
+          description: product.description,
+          type: product.category || 'apartment',
+          address: {
+            street: product.streetAddress || '',
+            unit: product.unitNumber || '',
+          },
+        },
+      });
+
+      // Sync Units under the property to reflect updated basics
+      const property = await tx.property.findFirst({ where: { slug: updatedProduct.slug } });
+      if (property) {
+        await tx.unit.updateMany({
+          where: { propertyId: property.id },
+          data: {
+            type: product.category || 'apartment',
+            bedrooms: product.bedrooms ? Number(product.bedrooms) : null,
+            bathrooms: product.bathrooms ? Number(product.bathrooms) : null,
+            sizeSqFt: product.sizeSqFt ? Number(product.sizeSqFt) : null,
+            rentAmount: Number(product.price),
+            images: product.images || [],
+          },
+        });
+      }
 
       // If sizeIds provided, remove existing variants and recreate (colorId no longer selected in UI)
       if (sizeIds && sizeIds.length) {

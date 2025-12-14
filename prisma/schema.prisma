@@ -535,6 +535,43 @@ model Landlord {
   payouts    Payout[]
   platformFees PlatformFee[]
   savedPayoutMethods SavedPayoutMethod[]
+  legalDocuments LegalDocument[]
+  quickBooksConnection QuickBooksConnection?
+  docuSignConnection DocuSignConnection?
+}
+
+model QuickBooksConnection {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landlordId            String   @unique @db.Uuid
+  realmId               String?
+  accessTokenEncrypted  String?
+  refreshTokenEncrypted String?
+  accessTokenExpiresAt  DateTime?
+  oauthState            String?
+  connectedAt           DateTime?
+  createdAt             DateTime @default(now()) @db.Timestamp(6)
+  updatedAt             DateTime @updatedAt
+
+  landlord Landlord @relation(fields: [landlordId], references: [id], onDelete: Cascade)
+
+  @@index([landlordId])
+  @@index([realmId])
+}
+
+model DocuSignConnection {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landlordId           String   @unique @db.Uuid
+  accessTokenEncrypted String?
+  refreshTokenEncrypted String?
+  accessTokenExpiresAt DateTime?
+  oauthState           String?
+  connectedAt          DateTime?
+  createdAt            DateTime @default(now()) @db.Timestamp(6)
+  updatedAt            DateTime @updatedAt
+
+  landlord Landlord @relation(fields: [landlordId], references: [id], onDelete: Cascade)
+
+  @@index([landlordId])
 }
 
 model SavedPayoutMethod {
@@ -613,6 +650,7 @@ model Lease {
   tenant User @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   rentPayments RentPayment[]
+  signatureRequests DocumentSignatureRequest[]
 }
 
 model RentPayment {
@@ -733,4 +771,49 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([userId, createdAt])
+}
+
+model LegalDocument {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landlordId      String   @db.Uuid
+  name            String
+  type            String   // 'lease', 'addendum', 'disclosure', 'notice', 'other'
+  category        String?  // 'custom', 'state_template'
+  state           String?  // State code for state-specific templates (e.g., 'NV', 'CA')
+  fileUrl         String?  // URL to uploaded file (S3/Cloudinary)
+  fileType        String?  // 'pdf', 'docx', 'doc'
+  fileSize        Int?     // Size in bytes
+  isTemplate      Boolean  @default(false) // If true, this is a template that can be used for new leases
+  isActive        Boolean  @default(true)
+  description     String?
+  docusignTemplateId String? // DocuSign template ID if integrated
+  createdAt       DateTime @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime @updatedAt
+
+  landlord        Landlord @relation(fields: [landlordId], references: [id], onDelete: Cascade)
+  signatureRequests DocumentSignatureRequest[]
+
+  @@index([landlordId])
+  @@index([type])
+}
+
+model DocumentSignatureRequest {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId        String   @db.Uuid
+  leaseId           String?  @db.Uuid
+  recipientEmail    String
+  recipientName     String
+  status            String   @default("pending") // 'pending', 'sent', 'viewed', 'signed', 'declined', 'expired'
+  docusignEnvelopeId String? // DocuSign envelope ID
+  signedAt          DateTime?
+  expiresAt         DateTime?
+  createdAt         DateTime @default(now()) @db.Timestamp(6)
+  updatedAt         DateTime @updatedAt
+
+  document          LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  lease             Lease?        @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+
+  @@index([documentId])
+  @@index([leaseId])
+  @@index([status])
 }

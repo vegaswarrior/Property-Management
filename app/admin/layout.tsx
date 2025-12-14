@@ -59,6 +59,11 @@ export default function AdminLayout({
           {/* Content - Mobile Responsive */}
           <div className='flex-1 flex flex-col'>
             <header className='h-12 md:h-14 border-b border-white/10 glass-effect-dark flex items-center justify-between px-3 md:px-4'>
+              <div className='md:hidden'>
+                <MobileMenu>
+                  <MainNav />
+                </MobileMenu>
+              </div>
               <div className='flex items-center gap-2 text-sm md:text-sm text-slate-300'>
                 <span className='font-semibold text-white'>Landlord Dashboard</span>
                 <span className='hidden sm:inline text-slate-400'>/ Overview</span>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/db/prisma';
+import { fetchQuickBooksCompanyInfo } from '@/lib/services/quickbooks-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +28,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Landlord not found' }, { status: 404 });
     }
 
+    const qbConn = await (prisma as any).quickBooksConnection.findUnique({
+      where: { landlordId },
+      select: { connectedAt: true, realmId: true, accessTokenEncrypted: true, refreshTokenEncrypted: true },
+    });
+
+    const isConnected = Boolean(
+      qbConn?.connectedAt && qbConn?.realmId && qbConn?.accessTokenEncrypted && qbConn?.refreshTokenEncrypted
+    );
+
+    if (!isConnected) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'QuickBooks is not connected. Please connect QuickBooks first.',
+          code: 'QUICKBOOKS_NOT_CONNECTED',
+        },
+        { status: 400 }
+      );
+    }
+
     // Get financial data for QuickBooks sync
     const properties = await prisma.property.findMany({
       where: { landlordId },
@@ -46,30 +67,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Mock QuickBooks API integration
-    // In production, you would use the QuickBooks API SDK
-    const quickBooksData = {
-      realmId: process.env.QUICKBOOKS_REALM_ID,
-      accessToken: process.env.QUICKBOOKS_ACCESS_TOKEN,
-      data: {
-        properties: properties.map(prop => ({
-          name: prop.name,
-          units: prop.units.map(unit => ({
-            name: unit.name,
-            rent: unit.leases[0]?.rentAmount || 0,
-            tenant: unit.leases[0]?.tenant?.name || 'Vacant',
-            payments: unit.leases[0]?.rentPayments.map(payment => ({
-              amount: payment.amount,
-              date: payment.paidAt,
-              status: payment.status,
-            })) || [],
-          })),
-        })),
-      },
-    };
-
-    // Simulate API call to QuickBooks
-    console.log('Syncing with QuickBooks:', JSON.stringify(quickBooksData, null, 2));
+    // Lightweight API call to validate tokens/realm; this also refreshes tokens if needed.
+    const companyInfo = await fetchQuickBooksCompanyInfo({ landlordId });
 
     // Store sync timestamp
     await prisma.landlord.update({
@@ -81,10 +80,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Successfully synced with QuickBooks',
+      message: 'QuickBooks connection verified. Ready for syncing.',
       syncedAt: new Date().toISOString(),
       propertiesCount: properties.length,
       unitsCount: properties.reduce((sum, prop) => sum + prop.units.length, 0),
+      quickBooksCompany: companyInfo?.CompanyInfo?.CompanyName || null,
     });
   } catch (error) {
     console.error('QuickBooks sync error:', error);
