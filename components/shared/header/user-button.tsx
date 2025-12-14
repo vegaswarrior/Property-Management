@@ -8,6 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { UserIcon } from 'lucide-react';
@@ -64,6 +65,14 @@ const UserButton = async () => {
               </div>
             </div>
           </DropdownMenuLabel>
+
+          {session.user?.role === 'superAdmin' && (
+            <DropdownMenuItem asChild>
+              <Link href='/super-admin'>Owner</Link>
+            </DropdownMenuItem>
+          )}
+
+          <DropdownMenuSeparator />
 
           <DropdownMenuItem asChild className='p-0 mb-1'>
             <SignOutButton />

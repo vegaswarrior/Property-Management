@@ -18,6 +18,14 @@ export async function requireAdmin() {
   return session
 }
 
+export async function requireSuperAdmin() {
+  const session = await auth()
+  if (session?.user?.role !== 'superAdmin') {
+    redirect('/unauthorized')
+  }
+  return session
+}
+
 export async function requireUser() {
   const session = await auth()
 

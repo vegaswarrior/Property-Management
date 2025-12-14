@@ -26,22 +26,12 @@ const views = [
   { id: "traffic", label: "Traffic" },
   { id: "engagement", label: "Engagement" },
   { id: "users", label: "Users & Sessions" },
+  { id: "portfolio", label: "Portfolio & Revenue" },
+  { id: "management", label: "User Management" },
 ] as const;
 
-type TopPage = {
-  path: string;
-  _count: {
-    _all: number;
-  };
-};
-
-type CountryStat = {
-  country: string | null;
-  _count: {
-    _all: number;
-  };
-};
-
+type TopPage = { path: string; _count: { _all: number } };
+type CountryStat = { country: string | null; _count: { _all: number } };
 type AnalyticsEvent = {
   id: string;
   createdAt: Date | string;
@@ -52,13 +42,8 @@ type AnalyticsEvent = {
   city?: string | null;
   userAgent?: string | null;
 };
-
-type DevicesBreakdown = {
-  desktop?: number;
-  mobile?: number;
-  tablet?: number;
-  other?: number;
-};
+type DevicesBreakdown = { desktop?: number; mobile?: number; tablet?: number; other?: number };
+type UserRow = { id: string; name: string | null; email: string; role: string | null; createdAt: string | Date };
 
 type AnalyticsSummary = {
   totalEvents: number;
@@ -74,15 +59,7 @@ type AnalyticsSummary = {
   averageSessionDurationMs: number;
 } & Record<string, unknown>;
 
-type LatestSale = {
-  id: string;
-  user: {
-    name?: string | null;
-  } | null;
-  createdAt: Date | string;
-  totalPrice: number | string;
-};
-
+type LatestSale = { id: string; user: { name?: string | null } | null; createdAt: Date | string; totalPrice: number | string };
 type OverviewSummary = {
   totalSales: { _sum: { totalPrice?: string | number | null } };
   ordersCount: number;
@@ -90,15 +67,40 @@ type OverviewSummary = {
   productsCount: number;
   salesData: { month: string; totalSales: number }[];
 };
+type StoreSummary = OverviewSummary & { latestSales: LatestSale[] };
+type RentTotals = { day: number; week: number; month: number; year: number };
+type LandlordPortfolio = { id: string; name: string; subdomain: string; properties: number; units: number; tenants: number; rentCollected: number };
+type LocationBreakdown = { state?: string; city?: string; count: number };
 
-type StoreSummary = OverviewSummary & {
-  latestSales: LatestSale[];
+type SuperAdminInsights = {
+  landlordsCount: number;
+  propertyManagersCount: number;
+  propertiesCount: number;
+  unitsCount: number;
+  activeLeases: number;
+  tenantsCount: number;
+  landlordsPortfolio: LandlordPortfolio[];
+  rentTotals: RentTotals;
+  revenueMTD: number;
+  revenuePrevMonth: number;
+  arpuPerLandlord: number;
+  collectionRate: number;
+  expectedThisMonth: number;
+  paidThisMonth: number;
+  delinquencyBuckets: { "0-30": number; "31-60": number; "61+": number };
+  landlordCohorts: { month: string; count: number }[];
+  funnel: { signedUpLandlords: number; onboardedProperties: number; activeLeases: number; propertyManagers: number };
+  lateRate: number;
+  revenueTimeline: { month: string; total: number }[];
+  locations: { states: LocationBreakdown[]; cities: LocationBreakdown[] };
 };
 
 interface SuperAdminDashboardProps {
   userEmail: string;
   summary: StoreSummary;
   analytics: AnalyticsSummary;
+  insights?: SuperAdminInsights;
+  users?: UserRow[];
   currentUser?: Session["user"];
 }
 
@@ -126,12 +128,21 @@ function parseOS(userAgent?: string | null): string {
   return "Other";
 }
 
-const SuperAdminDashboard = ({ userEmail, summary, analytics, currentUser }: SuperAdminDashboardProps) => {
+const SuperAdminDashboard = ({
+  userEmail,
+  summary,
+  analytics,
+  insights,
+  users,
+  currentUser,
+}: SuperAdminDashboardProps) => {
   const [activeView, setActiveView] = useState<(typeof views)[number]["id"]>("overview");
   const [isClearingStats, startClearingStats] = useTransition();
+  const [isDeletingUser, startDeletingUser] = useTransition();
   const [activeTrafficDetail, setActiveTrafficDetail] = useState<
     "today" | "yesterday" | "last7" | null
   >(null);
+  const [mode, setMode] = useState<"live" | "test">("test");
 
   const {
     totalEvents,
@@ -209,6 +220,29 @@ const SuperAdminDashboard = ({ userEmail, summary, analytics, currentUser }: Sup
     });
   };
 
+  const handleDeleteUser = (userId: string) => {
+    if (!window.confirm("Delete this user? This cannot be undone.")) return;
+    startDeletingUser(async () => {
+      try {
+        const res = await fetch("/api/super-admin/delete-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          console.error("Failed to delete user", data?.message);
+          alert("Failed to delete user");
+          return;
+        }
+        window.location.reload();
+      } catch (err) {
+        console.error("Error deleting user", err);
+        alert("Error deleting user");
+      }
+    });
+  };
+
   const suspiciousSessionsMap = new Map<string, number>();
   for (const ev of recentEvents) {
     if (!ev.sessionCartId) continue;
@@ -218,6 +252,115 @@ const SuperAdminDashboard = ({ userEmail, summary, analytics, currentUser }: Sup
   const suspiciousSessions = Array.from(suspiciousSessionsMap.entries())
     .filter(([, count]) => count >= 20)
     .slice(0, 5);
+
+  const managementContent = (
+    <div className="space-y-6">
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold tracking-tight">User Management</h2>
+          <p className="text-xs text-muted-foreground">Owner-only deletion. Destructive.</p>
+        </div>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(users || []).length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                    No users found.
+                  </TableCell>
+                </TableRow>
+              )}
+              {(users || []).map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell>{u.name || "N/A"}</TableCell>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell className="capitalize">{u.role || "user"}</TableCell>
+                  <TableCell>{formatDateTime(new Date(u.createdAt)).dateOnly}</TableCell>
+                  <TableCell className="text-right">
+                    <button
+                      type="button"
+                      disabled={isDeletingUser}
+                      onClick={() => handleDeleteUser(u.id)}
+                      className="text-xs font-semibold text-red-500 hover:text-red-600 disabled:opacity-60"
+                    >
+                      {isDeletingUser ? "Deleting..." : "Delete"}
+                    </button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </section>
+    </div>
+  );
+
+  const dataControlsContent = (
+    <div className="space-y-4">
+      <Card className="bg-slate-900 border-slate-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Data Controls</CardTitle>
+          <CardDescription className="text-xs">
+            Switch test/live mode and clear demo Stripe data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium">Mode</label>
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                type="button"
+                className={`px-3 py-1 rounded-md border ${
+                  mode === "test" ? "border-emerald-400 text-emerald-200" : "border-slate-700 text-slate-200"
+                }`}
+                onClick={() => setMode("test")}
+              >
+                Test
+              </button>
+              <button
+                type="button"
+                className={`px-3 py-1 rounded-md border ${
+                  mode === "live" ? "border-emerald-400 text-emerald-200" : "border-slate-700 text-slate-200"
+                }`}
+                onClick={() => setMode("live")}
+              >
+                Live
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Tie this toggle to env/config to switch data sources in revenue widgets.
+          </p>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!window.confirm("Clear demo/test revenue orders?")) return;
+              const res = await fetch("/api/super-admin/clear-demo-revenue", { method: "POST" });
+              const data = await res.json();
+              if (!res.ok || !data.success) {
+                alert("Failed to clear demo revenue");
+              } else {
+                alert(`Cleared ${data.deleted || 0} demo orders`);
+                window.location.reload();
+              }
+            }}
+            className="w-full rounded-md bg-red-500/90 text-white text-sm font-semibold py-2 hover:bg-red-600"
+          >
+            Clear Demo Revenue
+          </button>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   const overviewContent = (
     <div className="space-y-10">
@@ -268,6 +411,52 @@ const SuperAdminDashboard = ({ userEmail, summary, analytics, currentUser }: Sup
               <CardContent className="pt-4 space-y-1 text-sm">
                 <p className="text-xs font-medium text-muted-foreground">User ID</p>
                 <p className="font-mono text-xs truncate">{currentUser.id}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
+
+      {insights && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold tracking-tight">Portfolio Snapshot</h2>
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground mb-1">Landlords</p>
+                <p className="text-2xl font-semibold">{formatNumber(insights.landlordsCount)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground mb-1">Property Managers</p>
+                <p className="text-2xl font-semibold">
+                  {formatNumber(insights.propertyManagersCount)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground mb-1">Properties</p>
+                <p className="text-2xl font-semibold">{formatNumber(insights.propertiesCount)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground mb-1">Units</p>
+                <p className="text-2xl font-semibold">{formatNumber(insights.unitsCount)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground mb-1">Active Leases</p>
+                <p className="text-2xl font-semibold">{formatNumber(insights.activeLeases)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground mb-1">Tenants (active)</p>
+                <p className="text-2xl font-semibold">{formatNumber(insights.tenantsCount)}</p>
               </CardContent>
             </Card>
           </div>
@@ -745,10 +934,223 @@ const SuperAdminDashboard = ({ userEmail, summary, analytics, currentUser }: Sup
     </div>
   );
 
+  const portfolioContent = (
+    <div className="space-y-8">
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold tracking-tight">Landlords & Managers</h2>
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground mb-1">Landlords</p>
+              <p className="text-2xl font-semibold">
+                {formatNumber(insights?.landlordsCount ?? 0)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground mb-1">Property Managers</p>
+              <p className="text-2xl font-semibold">
+                {formatNumber(insights?.propertyManagersCount ?? 0)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground mb-1">Properties</p>
+              <p className="text-2xl font-semibold">
+                {formatNumber(insights?.propertiesCount ?? 0)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground mb-1">Units</p>
+              <p className="text-2xl font-semibold">
+                {formatNumber(insights?.unitsCount ?? 0)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold tracking-tight">Rent Intake (All Landlords)</h2>
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground mb-1">Today</p>
+              <p className="text-2xl font-semibold">
+                {formatCurrency(insights?.rentTotals.day ?? 0)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground mb-1">This Week</p>
+              <p className="text-2xl font-semibold">
+                {formatCurrency(insights?.rentTotals.week ?? 0)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground mb-1">This Month</p>
+              <p className="text-2xl font-semibold">
+                {formatCurrency(insights?.rentTotals.month ?? 0)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground mb-1">This Year</p>
+              <p className="text-2xl font-semibold">
+                {formatCurrency(insights?.rentTotals.year ?? 0)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold tracking-tight">Top Landlords by Portfolio</h2>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Landlord</TableHead>
+                <TableHead>Properties</TableHead>
+                <TableHead>Units</TableHead>
+                <TableHead>Tenants</TableHead>
+                <TableHead className="text-right">Rent Collected</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(insights?.landlordsPortfolio || []).length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                    No landlord data yet.
+                  </TableCell>
+                </TableRow>
+              )}
+              {(insights?.landlordsPortfolio || [])
+                .slice()
+                .sort((a, b) => b.rentCollected - a.rentCollected)
+                .slice(0, 10)
+                .map((ll) => (
+                  <TableRow key={ll.id}>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{ll.name}</span>
+                        <span className="text-xs text-muted-foreground">{ll.subdomain}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{ll.properties}</TableCell>
+                    <TableCell>{ll.units}</TableCell>
+                    <TableCell>{ll.tenants}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(ll.rentCollected)}</TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold tracking-tight">Geography (Top States)</h2>
+          <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>State</TableHead>
+                  <TableHead className="text-right">Properties</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(insights?.locations.states || []).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-sm text-muted-foreground">
+                      No location data yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {(insights?.locations.states || []).map((loc) => (
+                  <TableRow key={`${loc.state}-${loc.count}`}>
+                    <TableCell>{loc.state || "Unknown"}</TableCell>
+                    <TableCell className="text-right">{loc.count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold tracking-tight">Geography (Top Cities)</h2>
+          <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>City</TableHead>
+                  <TableHead className="text-right">Properties</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(insights?.locations.cities || []).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-sm text-muted-foreground">
+                      No location data yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {(insights?.locations.cities || []).map((loc) => (
+                  <TableRow key={`${loc.city}-${loc.count}`}>
+                    <TableCell>{loc.city || "Unknown"}</TableCell>
+                    <TableCell className="text-right">{loc.count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold tracking-tight">Revenue Timeline</h2>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden max-w-2xl">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Month</TableHead>
+                <TableHead className="text-right">Total Rent</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(insights?.revenueTimeline || []).length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={2} className="text-sm text-muted-foreground">
+                    No revenue timeline yet.
+                  </TableCell>
+                </TableRow>
+              )}
+              {(insights?.revenueTimeline || []).map((item) => (
+                <TableRow key={item.month}>
+                  <TableCell className="font-mono text-xs">{item.month}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(item.total)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </section>
+    </div>
+  );
+
   let content = overviewContent;
   if (activeView === "traffic") content = trafficContent;
   else if (activeView === "engagement") content = engagementContent;
   else if (activeView === "users") content = usersContent;
+  else if (activeView === "portfolio") content = portfolioContent;
 
   return (
     <div className="flex gap-6">
@@ -775,10 +1177,12 @@ const SuperAdminDashboard = ({ userEmail, summary, analytics, currentUser }: Sup
               key={view.id}
               type="button"
               onClick={() => setActiveView(view.id)}
-              className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition ${{
-                true: "bg-slate-800 text-slate-50",
-                false: "text-slate-300 hover:bg-slate-800/60 hover:text-slate-50",
-              }[String(activeView === view.id) as "true" | "false"]}`}
+              className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition ${
+                {
+                  true: "bg-slate-800 text-slate-50",
+                  false: "text-slate-300 hover:bg-slate-800/60 hover:text-slate-50",
+                }[String(activeView === view.id) as "true" | "false"]
+              }`}
             >
               <span>{view.label}</span>
             </button>
