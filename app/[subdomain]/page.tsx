@@ -153,7 +153,7 @@ export default async function SubdomainRootPage({
                   return (
                     <Link
                       key={property.id}
-                      href={`/properties/${property.slug}`}
+                      href={`/${subdomain}/properties/${property.slug}`}
                       className="rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-xl shadow-xl overflow-hidden flex flex-col hover:border-violet-400/50 transition-all hover:scale-[1.02]"
                     >
                       <div className="relative h-56 w-full bg-slate-900/80">
