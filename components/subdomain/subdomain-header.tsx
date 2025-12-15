@@ -1,23 +1,52 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Landlord, User } from '@prisma/client';
+import { Menu } from 'lucide-react';
+import { useState } from 'react';
+
+type LandlordWithExtras = Landlord & {
+  owner?: User | null;
+  companyName?: string | null;
+  companyEmail?: string | null;
+  companyPhone?: string | null;
+  companyAddress?: string | null;
+  themeColor?: string | null;
+};
 
 interface SubdomainHeaderProps {
-  landlord: Landlord & {
-    owner?: User | null;
-  };
+  landlord: LandlordWithExtras;
 }
 
 export default function SubdomainHeader({ landlord }: SubdomainHeaderProps) {
-  const ownerEmail = landlord.owner?.email;
-  const ownerPhone = landlord.owner?.phoneNumber;
+  const [open, setOpen] = useState(false);
+  const accent = (() => {
+    switch (landlord.themeColor) {
+      case 'emerald':
+        return 'text-emerald-300 border-emerald-400/40';
+      case 'blue':
+        return 'text-cyan-300 border-cyan-400/40';
+      case 'rose':
+        return 'text-rose-300 border-rose-400/40';
+      case 'amber':
+        return 'text-amber-300 border-amber-400/40';
+      default:
+        return 'text-violet-300 border-violet-400/40';
+    }
+  })();
+
+  const ownerEmail = landlord.companyEmail || landlord.owner?.email;
+  const ownerPhone = landlord.companyPhone || landlord.owner?.phoneNumber;
+  const brandName = landlord.companyName || landlord.name;
+  const basePath = `/${landlord.subdomain}`;
 
   return (
-    <header className="w-full bg-slate-900/60 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
+    <header className="w-full bg-gradient-to-r from-blue-900 to-indigo-600 text-white border-b border-white/10 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-6">
           {/* Logo and Company Name */}
-          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <Link href={basePath} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             {landlord.logoUrl ? (
               <div className="relative h-12 w-12 md:h-16 md:w-16">
                 <Image
@@ -25,21 +54,42 @@ export default function SubdomainHeader({ landlord }: SubdomainHeaderProps) {
                   alt={`${landlord.name} logo`}
                   fill
                   className="object-contain"
-                  priority
                 />
               </div>
             ) : (
-              <div className="h-12 w-12 md:h-16 md:w-16 rounded-lg bg-violet-500/20 flex items-center justify-center border border-violet-400/30">
+              <div className={`h-12 w-12 md:h-16 md:w-16 rounded-lg bg-white/5 flex items-center justify-center border ${accent}`}>
                 <span className="text-2xl font-bold text-violet-300">
-                  {landlord.name.charAt(0).toUpperCase()}
+                  {brandName.charAt(0).toUpperCase()}
                 </span>
               </div>
             )}
             <div className="hidden sm:block">
-              <h1 className="text-xl md:text-2xl font-bold text-white">{landlord.name}</h1>
+              <h1 className="text-xl md:text-2xl font-bold text-white">{brandName}</h1>
               <p className="text-xs text-slate-300/80">Property Management</p>
             </div>
           </Link>
+
+          {/* Nav */}
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-200/90">
+            <Link href={basePath} className="hover:text-violet-200 transition-colors">
+              Home
+            </Link>
+            <Link href={`${basePath}#properties`} className="hover:text-violet-200 transition-colors">
+              Listings
+            </Link>
+            <Link href={`${basePath}/about`} className="hover:text-violet-200 transition-colors">
+              About
+            </Link>
+            {ownerEmail ? (
+              <a href={`mailto:${ownerEmail}`} className="hover:text-violet-200 transition-colors">
+                Contact
+              </a>
+            ) : ownerPhone ? (
+              <a href={`tel:${ownerPhone}`} className="hover:text-violet-200 transition-colors">
+                Call
+              </a>
+            ) : null}
+          </nav>
 
           {/* Contact Info */}
           <div className="flex items-center gap-4 md:gap-6">
@@ -71,8 +121,40 @@ export default function SubdomainHeader({ landlord }: SubdomainHeaderProps) {
             >
               Sign In
             </Link>
+            <button
+              className="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-white/10 text-white hover:border-violet-400/60 transition-colors"
+              onClick={() => setOpen((v) => !v)}
+              aria-label="Toggle navigation"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
           </div>
         </div>
+
+        {/* Mobile Nav */}
+        {open && (
+          <div className="md:hidden mt-3 space-y-2 text-sm font-medium text-slate-200/90">
+            <Link href={basePath} className="block px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+              Home
+            </Link>
+            <Link href={`${basePath}#properties`} className="block px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+              Listings
+            </Link>
+            <Link href={`${basePath}/about`} className="block px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+              About
+            </Link>
+            {ownerEmail && (
+              <a href={`mailto:${ownerEmail}`} className="block px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+                Contact
+              </a>
+            )}
+            {ownerPhone && (
+              <a href={`tel:${ownerPhone}`} className="block px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+                Call
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );

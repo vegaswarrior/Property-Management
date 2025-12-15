@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import EvictionFlow from '@/components/admin/eviction-flow';
+import StartInspectionButton from '@/components/admin/start-inspection-button';
 
 export default async function PropertyDetailsPage(props: {
   params: Promise<{ id: string }>;
@@ -68,6 +69,7 @@ export default async function PropertyDetailsPage(props: {
             <Button asChild variant="outline" className="border-white/10 text-black">
               <Link href={`/admin/products/${property.id}`}>Edit</Link>
             </Button>
+            <StartInspectionButton propertyId={property.id} />
             <Button asChild>
               <Link href="/admin/maintenance">Start repair flow</Link>
             </Button>

@@ -1,4 +1,4 @@
-import { Building2, FileText, Wrench, CreditCard, Settings2, Wallet, Palette, TrendingUp, MessageCircle, Scale, LucideIcon } from 'lucide-react';
+import { Building2, FileText, Wrench, CreditCard, Settings2, Wallet, Palette, TrendingUp, MessageCircle, Scale, ScanText, LucideIcon } from 'lucide-react';
 
 export interface AdminNavLink {
   title: string;
@@ -19,6 +19,12 @@ export const adminNavLinks: AdminNavLink[] = [
     description: 'Review rental applications',
     href: '/admin/applications',
     icon: FileText,
+  },
+  {
+    title: 'Documents',
+    description: 'Digitize paper records',
+    href: '/admin/documents',
+    icon: ScanText,
   },
   {
     title: 'Maintenance',
@@ -61,12 +67,6 @@ export const adminNavLinks: AdminNavLink[] = [
     description: 'Leases & legal templates',
     href: '/admin/legal-documents',
     icon: Scale,
-  },
-  {
-    title: 'Settings',
-    description: 'Team & property settings',
-    href: '/admin/settings',
-    icon: Settings2,
   },
 ];
 

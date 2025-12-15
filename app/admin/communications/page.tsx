@@ -106,6 +106,63 @@ export default async function AdminCommunicationsPage() {
         </p>
       </div>
 
+      {/* Notification preferences moved from Settings */}
+      <section className="rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-xl shadow-[0_20px_70px_rgba(15,23,42,0.35)] overflow-hidden">
+        <div className="border-b border-white/10 px-5 py-4 flex items-center justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300/80">
+              Notifications
+            </p>
+            <h2 className="text-lg font-semibold text-slate-50">Alert preferences</h2>
+            <p className="text-xs text-slate-400/90">
+              Where to send alerts for applications, maintenance, and rent status.
+            </p>
+          </div>
+        </div>
+        <div className="p-5 grid gap-4 md:grid-cols-2">
+          <div className="space-y-3">
+            <label className="block text-xs font-semibold text-slate-200/90">Notifications email</label>
+            <input
+              className="w-full rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-violet-400 focus:ring-1 focus:ring-violet-400"
+              placeholder="notifications@company.com"
+            />
+            <div className="space-y-2 text-xs text-slate-200/90">
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" className="h-4 w-4 rounded border-white/20 bg-slate-900" defaultChecked />
+                New rental applications
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" className="h-4 w-4 rounded border-white/20 bg-slate-900" defaultChecked />
+                New maintenance tickets
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" className="h-4 w-4 rounded border-white/20 bg-slate-900" defaultChecked />
+                Late rent & partial payments
+              </label>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-slate-200/90">Tenant invite channels</p>
+            <p className="text-xs text-slate-400/90">
+              Choose how invites are sent when adding tenants.
+            </p>
+            <div className="space-y-2 text-xs text-slate-200/90">
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" className="h-4 w-4 rounded border-white/20 bg-slate-900" defaultChecked />
+                Email invite (recommended)
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" className="h-4 w-4 rounded border-white/20 bg-slate-900" />
+                Text message invite (coming soon)
+              </label>
+              <p className="text-[11px] text-slate-400/90">
+                We&apos;ll respect this preference when you send tenant invites; SMS may require verification before going live.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div className="space-y-6">
         <section className="rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur-2xl shadow-[0_20px_70px_rgba(15,23,42,0.35)] overflow-hidden">
           <div className="border-b border-white/10 px-5 py-4">

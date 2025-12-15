@@ -6,6 +6,7 @@ import Header from '@/components/shared/header';
 import Footer from '@/components/footer';
 import MobileMenu from '@/components/mobile/mobile-menu';
 import SessionProviderWrapper from '@/components/session-provider-wrapper';
+import AdminMobileDrawer from '@/components/admin/admin-mobile-drawer';
 
 export default function AdminLayout({
   children,
@@ -42,12 +43,6 @@ export default function AdminLayout({
             {/* Mobile/Tablet Quick Actions */}
             <div className='tablet-hidden space-y-2 pt-4 border-t border-white/10'>
               <Link
-                href='/admin/inspection-mode'
-                className='btn-modern text-white px-3 py-2 rounded-lg text-sm font-medium tablet-touch-target'
-              >
-                📱 Inspection Mode
-              </Link>
-              <Link
                 href='/admin/cash-collection'
                 className='btn-modern text-white px-3 py-2 rounded-lg text-sm font-medium tablet-touch-target'
               >
@@ -60,9 +55,7 @@ export default function AdminLayout({
           <div className='flex-1 flex flex-col'>
             <header className='h-12 md:h-14 border-b border-white/10 glass-effect-dark flex items-center justify-between px-3 md:px-4'>
               <div className='md:hidden'>
-                <MobileMenu>
-                  <MainNav />
-                </MobileMenu>
+                <AdminMobileDrawer />
               </div>
               <div className='flex items-center gap-2 text-sm md:text-sm text-slate-300'>
                 <span className='font-semibold text-white'>Landlord Dashboard</span>

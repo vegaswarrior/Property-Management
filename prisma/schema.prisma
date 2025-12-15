@@ -76,6 +76,7 @@ model User {
   rentalApplications  RentalApplication[]
   landlordsOwned      Landlord[]
   notifications       Notification[]
+  uploadedDocuments   ScannedDocument[]
 }
 
 model Account {
@@ -522,6 +523,15 @@ model Landlord {
   // Branding
   logoUrl                String?
   customDomain           String?    @unique
+  companyName            String?
+  companyEmail           String?
+  companyPhone           String?
+  companyAddress         String?
+  themeColor             String     @default("violet") // violet, emerald, blue, rose, amber
+  heroImages             String[]   @default([]) // up to 3 hero images for portal
+  aboutBio               String?
+  aboutPhoto             String?
+  aboutGallery           String[]   @default([])
 
   // Onboarding / intake fields
   unitsEstimateMin       Int?
@@ -538,6 +548,8 @@ model Landlord {
   legalDocuments LegalDocument[]
   quickBooksConnection QuickBooksConnection?
   docuSignConnection DocuSignConnection?
+  scannedDocuments ScannedDocument[]
+  classificationRules DocumentClassificationRule[]
 }
 
 model QuickBooksConnection {
@@ -610,6 +622,9 @@ model Property {
 
   units       Unit[]
   cashPayments CashPayment[]
+  inspections PropertyInspection[]
+  schedule    PropertySchedule?
+  appointments PropertyAppointment[]
 }
 
 model Unit {
@@ -816,4 +831,133 @@ model DocumentSignatureRequest {
   @@index([documentId])
   @@index([leaseId])
   @@index([status])
+}
+
+model PropertyInspection {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyId  String   @db.Uuid
+  inspectorId String?  @db.Uuid
+  unitId      String?  @db.Uuid
+  status      String   @default("in_progress") // in_progress, completed, cancelled
+  location    Json?    @db.Json // { lat, lng }
+  summary     Json?    @db.Json // { total, passed, failed, warnings }
+  createdAt   DateTime @default(now()) @db.Timestamp(6)
+  completedAt DateTime? @db.Timestamp(6)
+  updatedAt   DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  items    InspectionItem[]
+
+  @@index([propertyId])
+  @@index([status])
+}
+
+model InspectionItem {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inspectionId String   @db.Uuid
+  category     String   // exterior, interior, kitchen, bathroom, safety
+  item         String
+  status       String   // pass, fail, warning
+  notes        String?
+  photos       String[] @default([])
+  createdAt    DateTime @default(now()) @db.Timestamp(6)
+
+  inspection PropertyInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([inspectionId])
+}
+
+model PropertySchedule {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyId String   @db.Uuid
+  schedule   Json     @db.Json // { monday: { enabled: true, slots: [{start: "09:00", end: "17:00"}] }, ... }
+  timezone   String   @default("America/Los_Angeles")
+  slotDuration Int    @default(30) // minutes
+  bufferTime   Int    @default(0) // minutes between appointments
+  createdAt  DateTime @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId])
+  @@index([propertyId])
+}
+
+model PropertyAppointment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyId  String   @db.Uuid
+  scheduleId  String?  @db.Uuid
+  name        String
+  email       String
+  phone       String?
+  date        DateTime @db.Timestamp(6)
+  startTime   String   // "09:00"
+  endTime     String   // "09:30"
+  status      String   @default("pending") // pending, confirmed, cancelled, completed
+  notes       String?
+  createdAt   DateTime @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([date])
+  @@index([status])
+}
+
+model ScannedDocument {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landlordId      String   @db.Uuid
+  uploadedBy      String?  @db.Uuid
+  originalFileName String
+  fileUrl         String   // S3/Cloudinary URL
+  fileType        String   // pdf, jpg, png, etc
+  fileSize        Int      // bytes
+  ocrText         String?  // Extracted text from OCR
+  ocrConfidence   Decimal? @db.Decimal(5, 2) // 0-100 confidence score
+  ocrProcessedAt  DateTime? @db.Timestamp(6)
+  
+  // Classification
+  documentType    String?  // lease, receipt, application, notice, other
+  classificationStatus String @default("pending") // pending, classified, manual_review
+  classifiedAt    DateTime? @db.Timestamp(6)
+  
+  // Extracted metadata (AI/manual)
+  extractedData   Json?    @db.Json // Flexible field for extracted info
+  
+  // Conversion status
+  conversionStatus String  @default("pending") // pending, in_progress, completed, failed, skipped
+  convertedToLeaseId String? @db.Uuid
+  convertedToPaymentId String? @db.Uuid
+  convertedToTenantId String? @db.Uuid
+  
+  notes           String?
+  createdAt       DateTime @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime @updatedAt
+
+  landlord        Landlord @relation(fields: [landlordId], references: [id], onDelete: Cascade)
+  uploader        User?    @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
+
+  @@index([landlordId])
+  @@index([documentType])
+  @@index([classificationStatus])
+  @@index([conversionStatus])
+  @@index([createdAt])
+}
+
+model DocumentClassificationRule {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landlordId      String?  @db.Uuid // null = global rule
+  documentType    String   // lease, receipt, application, etc
+  keywords        String[] @default([]) // Keywords to match
+  patterns        String[] @default([]) // Regex patterns
+  priority        Int      @default(0) // Higher priority rules checked first
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime @updatedAt
+
+  landlord        Landlord? @relation(fields: [landlordId], references: [id], onDelete: Cascade)
+
+  @@index([landlordId])
+  @@index([documentType])
 }

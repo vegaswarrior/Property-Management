@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 import { headers } from 'next/headers';
 import { SubdomainApplyButton } from '@/components/subdomain/apply-button';
+import SubdomainHero from '@/components/subdomain/subdomain-hero';
 import {
   CheckCircle2,
   CreditCard,
@@ -17,6 +18,7 @@ import {
   DollarSign,
   ArrowRight,
 } from 'lucide-react';
+import type { Landlord } from '@prisma/client';
 
 /**
  * Root page for any subdomain
@@ -24,6 +26,21 @@ import {
  * If logged in tenant, redirects to main domain tenant dashboard
  * If logged in landlord, redirects to main domain admin dashboard
  */
+type LandlordWithBrand = Landlord & {
+  owner: {
+    email: string;
+    phoneNumber: string | null;
+  } | null;
+  companyName?: string | null;
+  companyEmail?: string | null;
+  companyPhone?: string | null;
+  companyAddress?: string | null;
+  heroImages?: string[] | null;
+  aboutBio?: string | null;
+  aboutPhoto?: string | null;
+  aboutGallery?: string[] | null;
+};
+
 export default async function SubdomainRootPage({
   params,
 }: {
@@ -32,7 +49,7 @@ export default async function SubdomainRootPage({
   const { subdomain } = await params;
   
   // Verify the subdomain exists and get owner info
-  const landlord = await prisma.landlord.findUnique({
+  const landlord = (await prisma.landlord.findUnique({
     where: { subdomain },
     include: {
       owner: {
@@ -42,7 +59,7 @@ export default async function SubdomainRootPage({
         },
       },
     },
-  });
+  })) as LandlordWithBrand | null;
 
   if (!landlord) {
     redirect('/');
@@ -89,37 +106,116 @@ export default async function SubdomainRootPage({
     orderBy: { createdAt: 'desc' },
   });
 
+  const brandName = landlord.companyName || landlord.name;
+  const brandEmail = landlord.companyEmail || landlord.owner?.email;
+  const brandPhone = landlord.companyPhone || landlord.owner?.phoneNumber;
+  const brandAddress = landlord.companyAddress;
+  const heroImages = landlord.heroImages || [];
+  const heroMedia = heroImages.length
+    ? heroImages
+    : properties.flatMap((property) => property.units.flatMap((u) => u.images || [])).slice(0, 3);
+
   return (
     <main className="flex-1 w-full">
         {/* Hero Section - Conversion Focused */}
-        <section className="w-full pt-12 pb-16 px-4">
-          <div className="max-w-6xl mx-auto text-center space-y-6">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              Find Your Perfect Home with {landlord.name}
-            </h1>
-            <p className="text-lg md:text-xl text-slate-200 max-w-3xl mx-auto">
-              Apply online in minutes. No application fees. Pay rent your way with Venmo, CashApp, or automatic bank transfers.
-            </p>
-            
-            {/* Key Benefits */}
-            <div className="flex flex-wrap items-center justify-center gap-6 pt-4">
-              <div className="flex items-center gap-2 text-violet-200">
-                <CheckCircle2 className="h-5 w-5" />
-                <span className="text-sm font-medium">No Application Fees</span>
-              </div>
-              <div className="flex items-center gap-2 text-violet-200">
-                <CheckCircle2 className="h-5 w-5" />
-                <span className="text-sm font-medium">Online Rent Payments</span>
-              </div>
-              <div className="flex items-center gap-2 text-violet-200">
-                <CheckCircle2 className="h-5 w-5" />
-                <span className="text-sm font-medium">24/7 Maintenance Requests</span>
-              </div>
-              <div className="flex items-center gap-2 text-violet-200">
-                <CheckCircle2 className="h-5 w-5" />
-                <span className="text-sm font-medium">Fast Approval Process</span>
-              </div>
+        <SubdomainHero
+          brandName={brandName}
+          brandEmail={brandEmail}
+          brandPhone={brandPhone}
+          brandAddress={brandAddress}
+          heroMedia={heroMedia}
+        />
+
+        {/* Property Listings Section (moved up for visibility) */}
+        <section id="properties" className="w-full py-14 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
+                Available Properties
+              </h2>
+              <p className="text-lg text-slate-200/80">
+                Browse our available units and find your perfect home
+              </p>
             </div>
+
+            {properties.length === 0 ? (
+              <div className="rounded-xl border border-white/10 bg-slate-900/60 backdrop-blur-sm px-4 py-12 text-center">
+                <p className="text-slate-200/90 mb-4">No properties are currently available.</p>
+                <p className="text-sm text-slate-300/80">
+                  Please check back soon or contact us for more information.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {properties.map((property) => {
+                  const unitCount = property.units.length;
+                  const firstUnit = property.units[0];
+                  return (
+                    <Link
+                      key={property.id}
+                      href={`/properties/${property.slug}`}
+                      className="rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-xl shadow-xl overflow-hidden flex flex-col hover:border-violet-400/50 transition-all hover:scale-[1.02]"
+                    >
+                      <div className="relative h-56 w-full bg-slate-900/80">
+                        {firstUnit?.images?.[0] ? (
+                          <Image
+                            src={firstUnit.images[0]}
+                            alt={property.name}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400 bg-gradient-to-br from-slate-800 to-slate-900">
+                            <Building2 className="h-16 w-16" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-6 space-y-4 flex-1 flex flex-col">
+                        <div>
+                          <h3 className="font-bold text-white text-xl mb-2">{property.name}</h3>
+                          {property.address && 
+                           typeof property.address === 'object' && 
+                           !Array.isArray(property.address) &&
+                           'street' in property.address && (
+                            <p className="text-sm text-slate-300/80">
+                              {String((property.address as { street?: string }).street || '')}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-slate-300/80">
+                          {firstUnit && (
+                            <>
+                              {firstUnit.bedrooms && Number(firstUnit.bedrooms) > 0 && (
+                                <span>{Number(firstUnit.bedrooms)} bed{Number(firstUnit.bedrooms) !== 1 ? 's' : ''}</span>
+                              )}
+                              {firstUnit.bathrooms && Number(firstUnit.bathrooms) > 0 && (
+                                <span>{Number(firstUnit.bathrooms)} bath{Number(firstUnit.bathrooms) !== 1 ? 's' : ''}</span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        {firstUnit?.rentAmount && (
+                          <div className="text-2xl font-bold text-violet-300">
+                            {formatCurrency(Number(firstUnit.rentAmount))}
+                            <span className="text-sm font-normal text-slate-300/80">/month</span>
+                          </div>
+                        )}
+                        {unitCount > 1 && (
+                          <p className="text-xs text-slate-400">
+                            {unitCount} unit{unitCount !== 1 ? 's' : ''} available
+                          </p>
+                        )}
+                        <div className="mt-auto">
+                          <span className="text-violet-300 text-sm font-medium hover:underline">
+                            View Details & Schedule Tour →
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
 
@@ -226,94 +322,6 @@ export default async function SubdomainRootPage({
                 </p>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* Property Listings Section */}
-        <section className="w-full py-16 px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Available Properties
-              </h2>
-              <p className="text-lg text-slate-200/80">
-                Browse our available units and find your perfect home
-              </p>
-            </div>
-
-            {properties.length === 0 ? (
-              <div className="rounded-xl border border-white/10 bg-slate-900/60 backdrop-blur-sm px-4 py-12 text-center">
-                <p className="text-slate-200/90 mb-4">No properties are currently available.</p>
-                <p className="text-sm text-slate-300/80">
-                  Please check back soon or contact us for more information.
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {properties.map((property) => {
-                  const unitCount = property.units.length;
-                  const firstUnit = property.units[0];
-                  return (
-                    <div
-                      key={property.id}
-                      className="rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-xl shadow-xl overflow-hidden flex flex-col hover:border-violet-400/50 transition-all hover:scale-[1.02]"
-                    >
-                      <div className="relative h-56 w-full bg-slate-900/80">
-                        {firstUnit?.images?.[0] ? (
-                          <Image
-                            src={firstUnit.images[0]}
-                            alt={property.name}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400 bg-gradient-to-br from-slate-800 to-slate-900">
-                            <Building2 className="h-16 w-16" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-6 space-y-4 flex-1 flex flex-col">
-                        <div>
-                          <h3 className="font-bold text-white text-xl mb-2">{property.name}</h3>
-                          {property.address && 
-                           typeof property.address === 'object' && 
-                           !Array.isArray(property.address) &&
-                           'street' in property.address && (
-                            <p className="text-sm text-slate-300/80">
-                              {String((property.address as { street?: string }).street || '')}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-slate-300/80">
-                          {firstUnit && (
-                            <>
-                              {firstUnit.bedrooms && Number(firstUnit.bedrooms) > 0 && (
-                                <span>{Number(firstUnit.bedrooms)} bed{Number(firstUnit.bedrooms) !== 1 ? 's' : ''}</span>
-                              )}
-                              {firstUnit.bathrooms && Number(firstUnit.bathrooms) > 0 && (
-                                <span>{Number(firstUnit.bathrooms)} bath{Number(firstUnit.bathrooms) !== 1 ? 's' : ''}</span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                        {firstUnit?.rentAmount && (
-                          <div className="text-2xl font-bold text-violet-300">
-                            {formatCurrency(Number(firstUnit.rentAmount))}
-                            <span className="text-sm font-normal text-slate-300/80">/month</span>
-                          </div>
-                        )}
-                        {unitCount > 1 && (
-                          <p className="text-xs text-slate-400">
-                            {unitCount} unit{unitCount !== 1 ? 's' : ''} available
-                          </p>
-                        )}
-                        <SubdomainApplyButton propertySlug={property.slug} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         </section>
 

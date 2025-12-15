@@ -9,6 +9,45 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 
+const brandingSchema = z.object({
+  companyName: z.string().trim().min(1).max(120).optional(),
+  companyEmail: z.string().trim().email().optional(),
+  companyPhone: z.string().trim().max(40).optional(),
+  companyAddress: z.string().trim().max(200).optional(),
+  themeColor: z.enum(['violet', 'emerald', 'blue', 'rose', 'amber']).optional(),
+  aboutBio: z.string().trim().max(800).optional(),
+});
+
+async function saveFiles(
+  files: File[],
+  dirParts: string[],
+  maxCount: number,
+  landlordId: string,
+) {
+  const uploadsDir = join(process.cwd(), 'public', ...dirParts);
+  await mkdir(uploadsDir, { recursive: true });
+
+  const stored: string[] = [];
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/svg+xml', 'image/webp'];
+
+  for (const file of files.slice(0, maxCount)) {
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Invalid file type. Please upload JPEG, PNG, SVG, or WebP');
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('File too large. Maximum size is 5MB');
+    }
+    const ext = file.name.split('.').pop() || 'png';
+    const fileName = `${landlordId}-${randomUUID()}.${ext}`;
+    const filePath = join(uploadsDir, fileName);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await writeFile(filePath, buffer);
+    stored.push(`/${dirParts.join('/')}/${fileName}`);
+  }
+
+  return stored;
+}
+
 export async function getOrCreateCurrentLandlord() {
   try {
     const session = await auth();
@@ -42,16 +81,64 @@ export async function getOrCreateCurrentLandlord() {
         subdomain = `${base}-${suffix++}`;
       }
 
+      const landlordCreateData: any = {
+        name: userName,
+        companyName: userName,
+        subdomain,
+        ownerUserId: userId,
+      };
+
       landlord = await prisma.landlord.create({
-        data: {
-          name: userName,
-          subdomain,
-          ownerUserId: userId,
-        },
+        // Cast to any to satisfy types before Prisma client is regenerated with new fields
+        data: landlordCreateData,
       });
     }
 
     return { success: true as const, landlord };
+  } catch (error) {
+    return { success: false as const, message: formatError(error) };
+  }
+}
+
+export async function updateLandlordBrandingProfile(formData: FormData) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      throw new Error('Unauthorized');
+    }
+
+    const landlord = await prisma.landlord.findFirst({
+      where: { ownerUserId: session.user.id },
+    });
+
+    if (!landlord) {
+      throw new Error('Landlord not found');
+    }
+
+    const parsed = brandingSchema.parse({
+      companyName: formData.get('companyName')?.toString(),
+      companyEmail: formData.get('companyEmail')?.toString(),
+      companyPhone: formData.get('companyPhone')?.toString(),
+      companyAddress: formData.get('companyAddress')?.toString(),
+      themeColor: formData.get('themeColor')?.toString() as any,
+      aboutBio: formData.get('aboutBio')?.toString(),
+    });
+
+    await prisma.landlord.update({
+      where: { id: landlord.id },
+      // cast because Prisma client may be outdated until regenerate
+      data: {
+        companyName: parsed.companyName,
+        companyEmail: parsed.companyEmail,
+        companyPhone: parsed.companyPhone,
+        companyAddress: parsed.companyAddress,
+        themeColor: (parsed.themeColor || 'violet') as any,
+        aboutBio: parsed.aboutBio,
+      } as any,
+    });
+
+    return { success: true as const };
   } catch (error) {
     return { success: false as const, message: formatError(error) };
   }
@@ -178,6 +265,92 @@ export async function uploadLandlordLogo(formData: FormData) {
       console.error('Failed to upload logo:', error instanceof Error ? error.message : 'Unknown error');
     }
     return { success: false, message: error instanceof Error ? error.message : 'Failed to upload logo' };
+  }
+}
+
+export async function uploadLandlordHeroImages(formData: FormData) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      throw new Error('Unauthorized');
+    }
+
+    const landlord = await prisma.landlord.findFirst({
+      where: { ownerUserId: session.user.id },
+    });
+
+    if (!landlord) {
+      throw new Error('Landlord not found');
+    }
+
+    const heroFiles = formData.getAll('heroImages').filter(Boolean) as File[];
+    if (!heroFiles.length) {
+      throw new Error('No files provided');
+    }
+
+    const stored = await saveFiles(heroFiles, ['uploads', 'hero'], 3, landlord.id);
+
+    await prisma.landlord.update({
+      where: { id: landlord.id },
+      data: { heroImages: { set: stored } },
+    });
+
+    return { success: true, heroImages: stored };
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Failed to upload hero images:', error instanceof Error ? error.message : 'Unknown error');
+    }
+    return { success: false, message: error instanceof Error ? error.message : 'Failed to upload hero images' };
+  }
+}
+
+export async function uploadLandlordAboutMedia(formData: FormData) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      throw new Error('Unauthorized');
+    }
+
+    const landlord = await prisma.landlord.findFirst({
+      where: { ownerUserId: session.user.id },
+    });
+
+    if (!landlord) {
+      throw new Error('Landlord not found');
+    }
+
+    const aboutPhoto = formData.get('aboutPhoto') as File | null;
+    const galleryFiles = formData.getAll('aboutGallery').filter(Boolean) as File[];
+
+    const updates: any = {};
+
+    if (aboutPhoto) {
+      const [photoUrl] = await saveFiles([aboutPhoto], ['uploads', 'about'], 1, landlord.id);
+      updates.aboutPhoto = photoUrl;
+    }
+
+    if (galleryFiles.length) {
+      const galleryUrls = await saveFiles(galleryFiles, ['uploads', 'about', 'gallery'], 6, landlord.id);
+      updates.aboutGallery = galleryUrls;
+    }
+
+    if (!Object.keys(updates).length) {
+      throw new Error('No files provided');
+    }
+
+    await prisma.landlord.update({
+      where: { id: landlord.id },
+      data: updates,
+    });
+
+    return { success: true, ...updates };
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('Failed to upload about media:', error instanceof Error ? error.message : 'Unknown error');
+    }
+    return { success: false, message: error instanceof Error ? error.message : 'Failed to upload about media' };
   }
 }
 

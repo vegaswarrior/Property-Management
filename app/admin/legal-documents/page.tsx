@@ -507,6 +507,58 @@ export default function LegalDocumentsPage() {
         </div>
       </div>
 
+      {/* Leasing defaults + legal settings (moved from Settings) */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="border-white/10 bg-slate-900/60 backdrop-blur-xl">
+          <CardHeader>
+            <CardTitle className="text-white">Leasing defaults</CardTitle>
+            <CardDescription className="text-slate-400">
+              Set defaults you can reuse inside leases and templates.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-slate-200/90">Default lease term (months)</Label>
+              <Input placeholder="12" className="bg-slate-800 border-slate-700" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-200/90">Billing day of month</Label>
+              <Input placeholder="1" className="bg-slate-800 border-slate-700" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-200/90">Late fee (%)</Label>
+              <Input placeholder="5" className="bg-slate-800 border-slate-700" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-200/90">Grace period (days)</Label>
+              <Input placeholder="3" className="bg-slate-800 border-slate-700" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-white/10 bg-slate-900/60 backdrop-blur-xl">
+          <CardHeader>
+            <CardTitle className="text-white">Legal & notices</CardTitle>
+            <CardDescription className="text-slate-400">
+              Defaults to reuse in notices and tenant communications.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <Label className="text-slate-200/90">Primary state / jurisdiction</Label>
+              <Input placeholder="e.g. California" className="bg-slate-800 border-slate-700" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-200/90">Default notice footer</Label>
+              <Textarea
+                className="bg-slate-800 border-slate-700 min-h-[96px]"
+                placeholder="Standard legal disclaimer or footer text to append to notices and communications."
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* DocuSign Setup Notice */}
       <Card className="border-amber-400/30 bg-amber-500/10">
         <CardContent className="pt-6">
