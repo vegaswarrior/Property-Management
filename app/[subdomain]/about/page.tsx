@@ -70,7 +70,7 @@ export default async function SubdomainAboutPage({
               )}
               <div className="text-center space-y-1">
                 <p className="text-lg font-semibold text-white">{brandName}</p>
-                <p className="text-xs text-slate-300/80">Property Management</p>
+                <p className="text-xs text-slate-300/80">Rooms For Rent LV</p>
               </div>
             </div>
           </div>

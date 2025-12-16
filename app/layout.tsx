@@ -9,7 +9,7 @@ import { ThemeProvider } from 'next-themes';
 
 export const metadata: Metadata = {
   title: {
-    template: `%s | Rocken My Vibe`,
+    template: `%s | Rooms For Rent LV`,
     default: APP_NAME,
   },
   description: APP_DESCRIPTION,

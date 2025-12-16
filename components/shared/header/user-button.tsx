@@ -35,7 +35,7 @@ const UserButton = async () => {
         <DropdownMenuTrigger asChild>
           <div className='flex items-center'>
             {userImage ? (
-              <div className='relative w-8 h-8 rounded-full overflow-hidden border border-gray-300 ml-2 cursor-pointer'>
+              <div className='relative w-8 h-8 rounded-full overflow-hidden border border-gray-300 ml-2 cursor-pointer bg-transparent'>
                 <Image
                   src={userImage}
                   alt={session.user?.name || 'User avatar'}
@@ -47,7 +47,7 @@ const UserButton = async () => {
             ) : (
               <Button
                 variant='ghost'
-                className='w-8 h-8 rounded-full ml-2 flex items-center justify-center bg-gray-200'
+                className='w-8 h-8 rounded-full ml-2 flex items-center justify-center bg-tranparent border border-gray-300'
               >
                 {firstInitial}
               </Button>
@@ -68,7 +68,7 @@ const UserButton = async () => {
 
           {session.user?.role === 'superAdmin' && (
             <DropdownMenuItem asChild>
-              <Link href='/super-admin'>Owner</Link>
+              <Link href='/super-admin' className='text-black font-semibold hover:bg-gray-800 hover:text-white'>Owner</Link>
             </DropdownMenuItem>
           )}
 

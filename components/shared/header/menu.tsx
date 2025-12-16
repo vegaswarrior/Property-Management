@@ -51,22 +51,14 @@ const Menu = async () => {
           <SheetTrigger className='align-middle'>
             <EllipsisVertical />
           </SheetTrigger>
-          <SheetContent className='flex flex-col items-start bg-linear-to-r from-slate-700 via-violet-600 to-stone-900'>
+          <SheetContent className='flex flex-col items-start bg-gradient-to-r from-blue-900 to-indigo-600 text-white'>
             <SheetTitle></SheetTitle>
             {/* <ModeToggle /> */}
             <NotificationBell isAdmin={isAdmin} />
-            <Button asChild variant='ghost' className='w-full justify-start'>
-              <Link href='/'>Home</Link>
-            </Button>
-            <Button asChild variant='ghost' className='w-full justify-start'>
-              <Link href='/about'>About</Link>
-            </Button>
-            <Button asChild variant='ghost' className='w-full justify-start'>
-              <Link href='/blog'>Blog</Link>
-            </Button>
-            <Button asChild variant='ghost' className='w-full justify-start'>
-              <Link href='/contact'>Contact</Link>
-            </Button>
+                <Link href='/' className="m-2.5 px-1 hover:text-violet-200/80 hover:underline transition-colors">Home</Link>
+                <Link href='/search?category=all' className="m-2.5 px-1 hover:text-violet-200/80 hover:underline transition-colors">Listings</Link>
+                <Link href='/about' className="m-2.5 px-1 hover:text-violet-200/80 hover:underline transition-colors">About</Link>
+                <Link href='/contact' className="m-2.5 px-1 hover:text-violet-200/80 hover:underline transition-colors">Contact</Link>
             {/* Dashboard link NOT shown on mobile - only in sidebar */}
             <UserButton />
             <SheetDescription></SheetDescription>

@@ -8,6 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Bell } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 type TenantOption = {
   leaseId: string;
@@ -17,6 +20,7 @@ type TenantOption = {
   phone: string;
   unitName: string;
   status: string;
+  needsLandlordSignature?: boolean;
 };
 
 export default function EvictionFlow({
@@ -107,14 +111,33 @@ export default function EvictionFlow({
 
         {tenant && (
           <div className="rounded-xl border border-white/10 bg-slate-800/60 p-4 text-sm text-slate-200 w-full md:w-auto">
-            <div className="font-semibold text-white">{tenant.name}</div>
-            <p className="text-slate-300 text-xs mt-1">{tenant.unitName}</p>
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="font-semibold text-white">{tenant.name}</div>
+                <p className="text-slate-300 text-xs mt-1">{tenant.unitName}</p>
+              </div>
+              {tenant.needsLandlordSignature && (
+                <div className="relative">
+                  <Bell className="h-5 w-5 text-amber-400 animate-pulse" />
+                  <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center bg-red-500 text-white text-[10px] border-0">
+                    !
+                  </Badge>
+                </div>
+              )}
+            </div>
             <p className="text-slate-300 text-xs">{tenant.email}</p>
             {tenant.phone && <p className="text-slate-300 text-xs">{tenant.phone}</p>}
+            {tenant.needsLandlordSignature && (
+              <p className="text-amber-400 text-xs mt-2 font-medium">
+                Lease requires your signature
+              </p>
+            )}
             <div className="mt-3 flex gap-2">
-              <Button variant="outline" size="sm" className="border-white/20 text-black">
-                Renew Lease
-              </Button>
+              <Link href={`/admin/leases/${tenant.leaseId}`}>
+                <Button variant="outline" size="sm" className="border-white/20 text-black">
+                  View Lease
+                </Button>
+              </Link>
               <Button variant="secondary" size="sm" className="text-black" onClick={() => setShowFlow(true)}>
                 Start Eviction
               </Button>

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import Menu from "./menu";
-// import CategoryDrawer from './category-drawer';
+import AdminMobileDrawer from '@/components/admin/admin-mobile-drawer';
 import { getCategoryTree } from '@/lib/actions/product.actions';
 import { prisma } from '@/db/prisma';
 import { headers } from 'next/headers';
@@ -25,18 +25,18 @@ async function getLandlordForRequest() {
 const Header = async () => {
   const categories = await getCategoryTree();
   const landlord = await getLandlordForRequest();
-  const displayName = landlord?.name || 'Property Management';
+  const displayName = landlord?.name || 'Rooms For Rent LV';
 
   return ( 
     <header className="w-full bg-transparent border-b border-white/10 text-slate-50">
       {/* Mobile header: hamburger left, logo centered, menu (three dots) right */}
-      <div className="wrapper flex items-center justify-between md:hidden">
-        {/* <div className="flex items-center">
-          <CategoryDrawer />
-        </div> */}
+      <div className="wrapper flex items-center justify-between md:hidden h-16 relative">
+        <div className="flex items-center">
+          <AdminMobileDrawer />
+        </div>
 
-        <Link href='/' className="flex items-center justify-center">
-          <div className="relative w-28 h-16">
+        <Link href='/' className="absolute left-1/2 transform -translate-x-1/2 top-0 h-full flex items-center justify-center mt-2">
+          <div className="relative w-48 h-48">
             <Image
               src={landlord?.logoUrl || '/images/logo.svg'}
               fill
@@ -57,7 +57,7 @@ const Header = async () => {
         <div className="flex items-center">
           <Link href='/' className="flex items-center">
             {/* <CategoryDrawer /> */}
-            <div className="relative w-36 h-36">
+            <div className="relative w-48 h-48">
               <Image 
                 src={landlord?.logoUrl || '/images/logo.svg'}
                 fill
@@ -66,9 +66,9 @@ const Header = async () => {
                 priority={true}
               />
             </div>
-            <span className='hidden lg:block font-bold text-2xl ml-3 text-slate-50'>
+            {/* <span className='hidden lg:block font-bold text-2xl ml-3 text-slate-50'>
               {displayName}
-            </span>
+            </span> */}
           </Link>
         </div>
 

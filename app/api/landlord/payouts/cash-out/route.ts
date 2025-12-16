@@ -92,6 +92,40 @@ export async function POST(req: NextRequest) {
 
     const stripe = new Stripe(stripeSecretKey);
 
+    const stripeAccountId = landlord.stripeConnectAccountId!;
+    const connectedAccount = await stripe.accounts.retrieve(stripeAccountId);
+
+    if (!connectedAccount.payouts_enabled) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Payouts are not enabled yet. Please complete payout verification first.',
+          needsOnboarding: true,
+        },
+        { status: 409 }
+      );
+    }
+
+    const requiredExternalObject = payoutType === 'instant' ? 'card' : 'bank_account';
+    const externalAccounts = await stripe.accounts.listExternalAccounts(stripeAccountId, {
+      object: requiredExternalObject,
+      limit: 1,
+    });
+
+    if (!externalAccounts.data.length) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            payoutType === 'instant'
+              ? 'No debit card on file for instant payouts. Please add one to receive instant cashouts.'
+              : 'No bank account on file for payouts. Please add one to cash out.',
+          needsOnboarding: true,
+        },
+        { status: 409 }
+      );
+    }
+
     const payoutRecord = await prisma.$transaction(async (tx) => {
       const payout = await tx.payout.create({
         data: {
@@ -145,7 +179,7 @@ export async function POST(req: NextRequest) {
         },
       },
       {
-        stripeAccount: landlord.stripeConnectAccountId!,
+        stripeAccount: stripeAccountId,
       }
     );
 

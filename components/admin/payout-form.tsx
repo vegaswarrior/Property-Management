@@ -31,6 +31,14 @@ export default function PayoutForm({ availableAmount }: PayoutFormProps) {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
+        if (data?.needsOnboarding) {
+          toast({
+            variant: 'destructive',
+            description: data?.message || 'Payout setup is required before cashing out.',
+          });
+          router.push('/admin/onboarding/payouts');
+          return;
+        }
         toast({
           variant: 'destructive',
           description: data.message || 'Failed to process payout.',

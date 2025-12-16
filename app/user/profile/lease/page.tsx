@@ -2,6 +2,8 @@ import { auth } from '@/auth';
 import { prisma } from '@/db/prisma';
 import { redirect } from 'next/navigation';
 import DocusignSignButton from './docusign-sign-button';
+import LeaseViewer from './lease-viewer';
+import { renderDocuSignReadyLeaseHtml } from '@/lib/services/lease-template';
 
 export default async function UserProfileLeasePage() {
   const session = await auth();
@@ -23,11 +25,26 @@ export default async function UserProfileLeasePage() {
         select: {
           name: true,
           type: true,
-          property: { select: { name: true } },
+          property: { select: { name: true, landlord: { select: { name: true } } } },
         },
       },
     },
   });
+
+  const leaseHtml = lease
+    ? renderDocuSignReadyLeaseHtml({
+        landlordName: lease.unit.property?.landlord?.name || lease.unit.property?.name || 'Landlord',
+        tenantName: session.user.name || 'Tenant',
+        propertyLabel: `${lease.unit.property?.name || 'Property'} - ${lease.unit.name} (${lease.unit.type})`,
+        leaseStartDate: new Date(lease.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        leaseEndDate: lease.endDate
+          ? new Date(lease.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+          : 'Month-to-Month',
+        rentAmount: Number(lease.rentAmount).toLocaleString(),
+        billingDayOfMonth: String(lease.billingDayOfMonth),
+        todayDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      })
+    : '';
 
   return (
     <div className='w-full min-h-screen px-4 py-8 md:px-8'>
@@ -84,6 +101,7 @@ export default async function UserProfileLeasePage() {
                 document.
               </p>
               <div className='flex gap-3'>
+                <LeaseViewer leaseHtml={leaseHtml} triggerLabel='View lease' />
                 <DocusignSignButton leaseId={lease.id} />
               </div>
             </div>

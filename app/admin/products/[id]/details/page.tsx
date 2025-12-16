@@ -26,7 +26,12 @@ export default async function PropertyDetailsPage(props: {
       units: {
         include: {
           leases: {
-            include: { tenant: { select: { id: true, name: true, email: true, phoneNumber: true } } },
+            include: { 
+              tenant: { select: { id: true, name: true, email: true, phoneNumber: true } },
+              signatureRequests: {
+                select: { role: true, status: true },
+              },
+            },
           },
         },
       },
@@ -41,21 +46,28 @@ export default async function PropertyDetailsPage(props: {
       .filter(Boolean)[0] ?? '';
 
   const tenants = property.units.flatMap((unit) =>
-    unit.leases.map((lease) => ({
-      leaseId: lease.id,
-      tenantId: lease.tenantId,
-      name: lease.tenant?.name || 'Tenant',
-      email: lease.tenant?.email || '',
-      phone: lease.tenant?.phoneNumber || '',
-      unitName: unit.name,
-      status: lease.status,
-    }))
+    unit.leases.map((lease) => {
+      const needsLandlordSignature = lease.signatureRequests?.some(
+        (sr) => sr.role === 'landlord' && sr.status !== 'signed'
+      );
+      
+      return {
+        leaseId: lease.id,
+        tenantId: lease.tenantId,
+        name: lease.tenant?.name || 'Tenant',
+        email: lease.tenant?.email || '',
+        phone: lease.tenant?.phoneNumber || '',
+        unitName: unit.name,
+        status: lease.status,
+        needsLandlordSignature: needsLandlordSignature || false,
+      };
+    })
   );
 
   return (
     <main className="w-full px-4 py-8 md:px-0">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-violet-200/70">Property overview</p>
             <h1 className="text-3xl md:text-4xl font-semibold text-white">{property.name}</h1>
@@ -65,12 +77,12 @@ export default async function PropertyDetailsPage(props: {
                 : ''}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button asChild variant="outline" className="border-white/10 text-black">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button asChild variant="outline" className="border-white/10 text-black w-full sm:w-auto">
               <Link href={`/admin/products/${property.id}`}>Edit</Link>
             </Button>
             <StartInspectionButton propertyId={property.id} />
-            <Button asChild>
+            <Button asChild className="w-full sm:w-auto">
               <Link href="/admin/maintenance">Start repair flow</Link>
             </Button>
           </div>
@@ -99,28 +111,30 @@ export default async function PropertyDetailsPage(props: {
               <div className="h-px bg-white/10" />
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-slate-200">Units</h3>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-3">
                   {property.units.map((unit) => (
                     <div
                       key={unit.id}
-                      className="rounded-xl border border-white/10 bg-slate-800/60 p-3 space-y-1"
+                      className="rounded-xl border border-white/10 bg-slate-800/60 p-4 space-y-2"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <p className="text-sm text-white font-medium">{unit.name}</p>
-                        <Badge variant="outline" className="border-emerald-400/40 text-emerald-200">
+                        <Badge variant="outline" className="border-emerald-400/40 text-emerald-200 self-start">
                           {unit.isAvailable ? 'Available' : 'Occupied'}
                         </Badge>
                       </div>
-                      <p className="text-xs text-slate-300">
-                        {unit.type} • {unit.bedrooms ?? '—'} bd •{' '}
-                        {unit.bathrooms !== null && unit.bathrooms !== undefined
-                          ? Number(unit.bathrooms)
-                          : '—'}{' '}
-                        ba • {unit.sizeSqFt ? `${unit.sizeSqFt} sqft` : '—'}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        Rent: {formatCurrency(Number(unit.rentAmount ?? 0))}
-                      </p>
+                      <div className="space-y-1">
+                        <p className="text-xs text-slate-300">
+                          {unit.type} • {unit.bedrooms ?? '—'} bd •{' '}
+                          {unit.bathrooms !== null && unit.bathrooms !== undefined
+                            ? Number(unit.bathrooms)
+                            : '—'}{' '}
+                          ba • {unit.sizeSqFt ? `${unit.sizeSqFt} sqft` : '—'}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          Rent: {formatCurrency(Number(unit.rentAmount ?? 0))}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -43,6 +43,12 @@ export async function GET(_req: NextRequest) {
       const account = await stripe.accounts.create({
         type: 'express',
         email: session.user.email || undefined,
+        capabilities: {
+          transfers: { requested: true },
+        },
+        business_profile: {
+          product_description: 'Property management software with rent collection and payouts',
+        },
         metadata: {
           landlordId: landlord.id,
         },
@@ -59,10 +65,25 @@ export async function GET(_req: NextRequest) {
       });
     }
 
+    const accountSession = await stripe.accountSessions.create({
+      account: connectAccountId,
+      components: {
+        account_onboarding: { enabled: true },
+      },
+    });
+
+    await prisma.landlord.update({
+      where: { id: landlord.id },
+      data: {
+        stripeOnboardingStatus: 'pending',
+      },
+    });
+
     return NextResponse.json({
       success: true,
       accountId: connectAccountId,
       onboardingStatus: landlord.stripeOnboardingStatus || 'pending',
+      clientSecret: accountSession.client_secret,
     });
   } catch (error) {
     console.error('Error creating Stripe Connect onboarding link:', error);

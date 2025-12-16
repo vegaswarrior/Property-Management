@@ -1,17 +1,43 @@
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger,} from '@/components/ui/drawer';
-import { getCategoryTree } from '@/lib/actions/product.actions';
-import { MenuIcon } from 'lucide-react';
+import { auth } from '@/auth';
+import { MenuIcon, LayoutDashboard, User, Building } from 'lucide-react';
 import Link from 'next/link';
-import Search from './search';
 
 const CategoryDrawer = async () => {
-  let categories: Awaited<ReturnType<typeof getCategoryTree>> = [];
-  try {
-    categories = await getCategoryTree();
-  } catch (error) {
-    console.error('Failed to fetch categories:', error);
+  const session = await auth();
+  const userRole = session?.user?.role;
+
+  // Don't render anything if user is not logged in
+  if (!session?.user) {
+    return null;
   }
+
+  // Determine dashboard links based on role
+  const getDashboardLinks = () => {
+    const links = [];
+
+    if (userRole === 'tenant') {
+      links.push({
+        label: 'Tenant Dashboard',
+        href: '/user/dashboard',
+        icon: User,
+        description: 'Manage your applications and rentals'
+      });
+    } else if (userRole === 'landlord' || userRole === 'admin' || userRole === 'superAdmin' || userRole === 'property_manager') {
+      links.push({
+        label: 'Landlord Dashboard',
+        href: '/admin/overview',
+        icon: Building,
+        description: 'Manage properties and applications'
+      });
+    }
+
+    return links;
+  };
+
+  const dashboardLinks = getDashboardLinks();
+
   return (
     <Drawer direction='left'>
       <DrawerTrigger asChild>
@@ -19,51 +45,33 @@ const CategoryDrawer = async () => {
           <MenuIcon />
         </Button>
       </DrawerTrigger>
-      <DrawerContent className='h-full max-w-sm bg-linear-to-r from-slate-700 via-violet-600 to-stone-900'>
+      <DrawerContent className='h-full max-w-sm bg-gradient-to-r from-blue-900 to-indigo-600 text-white'>
         <DrawerHeader>
-          <DrawerTitle>Select a category</DrawerTitle>
-          <div className='mt-8'>
-            <Search />
-          </div>
-          <div className='space-y-1 mt-4'>
-            {categories.length > 0 ? (
-              categories.map((cat) => (
-                <div key={cat.category} className='relative group'>
+          <DrawerTitle>Navigation</DrawerTitle>
+          <div className='space-y-2 mt-4'>
+            {dashboardLinks.map((link) => {
+              const IconComponent = link.icon;
+              return (
+                <DrawerClose asChild key={link.href}>
                   <Button
                     variant='ghost'
-                    className='w-full justify-start'
+                    className='w-full justify-start h-auto p-4'
                     asChild
-                  > 
-                    <DrawerClose asChild>
-                      <Link href={`/search?category=${encodeURIComponent(cat.category)}`}>
-                        {cat.category} ({cat.count})
-                      </Link>
-                    </DrawerClose>
-                  </Button>
-
-                  {cat.subCategories.length > 0 && (
-                    <div className='absolute left-full top-0 hidden group-hover:block rounded-md bg-slate-900/95 text-slate-100 shadow-lg p-3 min-w-[180px] z-50'>
-                      <p className='text-xs font-semibold uppercase mb-1 text-slate-400'>
-                        {cat.category} subcategories
-                      </p>
-                      <div className='flex flex-col space-y-0.5'>
-                        {cat.subCategories.map((sub) => (
-                          <DrawerClose asChild key={`${cat.category}-${sub}`}>
-                            <Link
-                              href={`/search?category=${encodeURIComponent(cat.category)}&subCategory=${encodeURIComponent(sub)}`}
-                              className='text-xs hover:text-violet-300'
-                            >
-                              {sub}
-                            </Link>
-                          </DrawerClose>
-                        ))}
+                  >
+                    <Link href={link.href} className='flex items-start gap-3'>
+                      <IconComponent className='h-5 w-5 mt-0.5 flex-shrink-0' />
+                      <div className='text-left'>
+                        <div className='font-medium'>{link.label}</div>
+                        <div className='text-sm text-slate-300 mt-1'>{link.description}</div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p className='text-sm text-gray-500'>Categories will load shortly...</p>
+                    </Link>
+                  </Button>
+                </DrawerClose>
+              );
+            })}
+
+            {dashboardLinks.length === 0 && (
+              <p className='text-sm text-gray-400'>No dashboard available for your account type.</p>
             )}
           </div>
         </DrawerHeader>

@@ -18,7 +18,7 @@ export default function AdminMobileDrawer() {
           <MenuIcon className='h-5 w-5' />
         </Button>
       </DrawerTrigger>
-      <DrawerContent className='h-full max-w-sm bg-gradient-to-br from-slate-900 via-violet-900/40 to-slate-900 border-r border-white/10'>
+      <DrawerContent className='h-full max-w-sm bg-gradient-to-r from-blue-900 to-indigo-600 text-white'>
         <DrawerHeader>
           <DrawerTitle className='text-white text-lg'>Admin Dashboard</DrawerTitle>
         </DrawerHeader>

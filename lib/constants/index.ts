@@ -1,6 +1,6 @@
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Rocken My Vibe';
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Rooms For Rent LV';
 export const APP_DESCRIPTION = process.env.NEXT_PUBLIC_APP_DESCRIPTION ||
-  'Style Your Soul & Your Body Will Thank You For';
+  'Helping You Manage Your Dreams One Property at a Time';
 export const SERVER_URL =
   process.env.NEXT_PUBLIC_SERVER_URL || 'https://www.rooms4rentlv.com';
 export const LATEST_PRODUCTS_LIMIT =

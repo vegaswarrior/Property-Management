@@ -2,35 +2,42 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import LeaseSigningModal from '@/components/lease-signing-modal';
 
 export default function DocusignSignButton({ leaseId }: { leaseId: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [signingToken, setSigningToken] = useState('');
 
   const handleClick = async () => {
     try {
       setIsLoading(true);
       setError('');
 
-      const res = await fetch(`/api/leases/${leaseId}/docusign`, {
+      const res = await fetch(`/api/leases/${leaseId}/sign-session`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'tenant' }),
       });
 
       if (!res.ok) {
-        setError('Failed to start DocuSign signing.');
+        const data = await res.json().catch(() => ({}));
+        setError(data.message || 'Failed to start signing.');
         return;
       }
 
-      const data = (await res.json()) as { url?: string };
-
-      if (!data.url) {
-        setError('DocuSign did not return a signing URL.');
+      const data = (await res.json()) as { url?: string; token?: string };
+      const token = data.token || '';
+      if (!token) {
+        setError('Signing link missing.');
         return;
       }
 
-      window.location.href = data.url;
+      setSigningToken(token);
+      setModalOpen(true);
     } catch (err) {
-      setError('Something went wrong starting DocuSign.');
+      setError('Something went wrong starting signing.');
     } finally {
       setIsLoading(false);
     }
@@ -45,8 +52,16 @@ export default function DocusignSignButton({ leaseId }: { leaseId: string }) {
         disabled={isLoading}
         className='rounded-full'
       >
-        {isLoading ? 'Opening DocuSign…' : 'Sign lease electronically'}
+        {isLoading ? 'Opening…' : 'Sign lease electronically'}
       </Button>
+      
+      {signingToken && (
+        <LeaseSigningModal 
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          token={signingToken}
+        />
+      )}
     </div>
   );
 }

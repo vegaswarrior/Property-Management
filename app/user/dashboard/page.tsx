@@ -45,6 +45,9 @@ export default async function TenantDashboardPage() {
           },
         },
       },
+      signatureRequests: {
+        select: { role: true, status: true },
+      },
     },
   });
 
@@ -85,6 +88,13 @@ export default async function TenantDashboardPage() {
     0
   );
 
+  const tenantNeedsSignature = !!activeLease?.signatureRequests?.some(
+    (sr) => sr.role === 'tenant' && sr.status !== 'signed'
+  );
+  const landlordPendingSignature = !!activeLease?.signatureRequests?.some(
+    (sr) => sr.role === 'landlord' && sr.status !== 'signed'
+  );
+
   return (
     <main className='w-full'>
       <div className='max-w-7xl space-y-6'>
@@ -95,6 +105,16 @@ export default async function TenantDashboardPage() {
           <p className='text-sm text-slate-300/80'>
             Your tenant dashboard - manage your rental, payments, and maintenance requests.
           </p>
+          {tenantNeedsSignature && (
+            <Badge className='mt-2 bg-amber-500/20 text-amber-100 border-amber-400/50'>
+              Lease requires your signature
+            </Badge>
+          )}
+          {landlordPendingSignature && !tenantNeedsSignature && (
+            <Badge className='mt-2 bg-emerald-500/20 text-emerald-100 border-emerald-400/50'>
+              Waiting on landlord signature
+            </Badge>
+          )}
         </div>
 
         {/* Draft Applications Alert - Show prominently if user has pending applications to complete */}
