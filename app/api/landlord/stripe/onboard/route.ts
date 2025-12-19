@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/db/prisma';
 import { getOrCreateCurrentLandlord } from '@/lib/actions/landlord.actions';
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     const session = await auth();
 
@@ -37,6 +37,10 @@ export async function GET(_req: NextRequest) {
 
     const landlord = landlordResult.landlord;
 
+    const componentParam = req.nextUrl.searchParams.get('component');
+    const component: 'account_onboarding' | 'payouts' =
+      componentParam === 'payouts' ? 'payouts' : 'account_onboarding';
+
     let connectAccountId = landlord.stripeConnectAccountId || undefined;
 
     if (!connectAccountId) {
@@ -67,9 +71,27 @@ export async function GET(_req: NextRequest) {
 
     const accountSession = await stripe.accountSessions.create({
       account: connectAccountId,
-      components: {
-        account_onboarding: { enabled: true },
-      },
+      components:
+        component === 'payouts'
+          ? {
+              payouts: {
+                enabled: true,
+                features: {
+                  external_account_collection: true,
+                  edit_payout_schedule: true,
+                  instant_payouts: true,
+                  standard_payouts: true,
+                },
+              },
+            }
+          : {
+              account_onboarding: {
+                enabled: true,
+                features: {
+                  external_account_collection: true,
+                },
+              },
+            },
     });
 
     await prisma.landlord.update({
@@ -83,6 +105,7 @@ export async function GET(_req: NextRequest) {
       success: true,
       accountId: connectAccountId,
       onboardingStatus: landlord.stripeOnboardingStatus || 'pending',
+      component,
       clientSecret: accountSession.client_secret,
     });
   } catch (error) {

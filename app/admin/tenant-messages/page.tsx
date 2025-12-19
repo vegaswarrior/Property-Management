@@ -11,32 +11,18 @@ import { MessageCircle, Send, Users, Search, Bell, Megaphone } from 'lucide-reac
 import { formatDistanceToNow } from '@/lib/utils/date-utils';
 import { createMessage, getMyMessages } from '@/lib/actions/notification.actions';
 
+import type { Prisma } from '@prisma/client';
+
 interface Message {
   id: string;
-  threadId: string;
   userId: string;
-  thread: {
-    id: string;
-    type: string;
-    subject: string | null;
-    status: string;
-    createdAt: Date;
-    updatedAt: Date;
-    messages: {
-      id: string;
-      content: string | null;
-      senderName: string | null;
-      senderEmail: string | null;
-      createdAt: Date;
-    }[];
-    participants: {
-      user: {
-        id: string;
-        name: string;
-        email: string;
-      };
-    }[];
-  };
+  type: string;
+  title: string;
+  message: string;
+  metadata: Prisma.JsonValue;
+  isRead: boolean;
+  actionUrl: string | null;
+  createdAt: Date;
 }
 
 export default function TenantMessagesPage() {
@@ -78,11 +64,11 @@ export default function TenantMessagesPage() {
     }
 
     try {
-      await createMessage(
-        newMessage.recipientId,
-        newMessage.subject,
-        newMessage.content
-      );
+      await createMessage({
+        recipientId: newMessage.recipientId,
+        title: newMessage.subject,
+        message: newMessage.content,
+      });
       
       alert('Message sent successfully');
       setNewMessage({ recipientId: '', subject: '', content: '' });
@@ -115,9 +101,8 @@ export default function TenantMessagesPage() {
 
   // Filter messages based on search
   const filteredMessages = messages.filter(message =>
-    (message.thread.subject || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (message.thread.messages[0]?.content || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    message.thread.participants.some(p => p.user.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    (message.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (message.message || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   useEffect(() => {
@@ -187,9 +172,6 @@ export default function TenantMessagesPage() {
               ) : (
                 <div className="space-y-2">
                   {filteredMessages.map((message) => {
-                    const latestMessage = message.thread.messages[0];
-                    const otherParticipants = message.thread.participants.filter(p => p.user.name !== 'Current User'); // Filter out current user
-                    
                     return (
                       <div
                         key={message.id}
@@ -202,19 +184,19 @@ export default function TenantMessagesPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-medium text-sm truncate">
-                                {message.thread.subject || 'No Subject'}
+                                {message.title || 'No Subject'}
                               </span>
-                              <Badge variant="secondary" className="text-xs">
-                                {otherParticipants.length} participants
-                              </Badge>
+                              {!message.isRead && (
+                                <Badge variant="secondary" className="text-xs">
+                                  New
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground truncate mb-2">
-                              {latestMessage?.content || 'No messages yet'}
+                              {message.message || 'No content'}
                             </p>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>From: {latestMessage?.senderName || 'Unknown'}</span>
-                              <span>•</span>
-                              <span>{latestMessage?.createdAt ? formatDistanceToNow(latestMessage.createdAt, { addSuffix: true }) : 'Unknown time'}</span>
+                              <span>{message.createdAt ? formatDistanceToNow(message.createdAt, { addSuffix: true }) : 'Unknown time'}</span>
                             </div>
                           </div>
                         </div>
@@ -341,28 +323,16 @@ export default function TenantMessagesPage() {
           ) : selectedThread ? (
             <Card>
               <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="truncate">{selectedThread.thread.subject || 'No Subject'}</CardTitle>
+                <CardTitle className="truncate">{selectedThread.title || 'No Subject'}</CardTitle>
                 <CardDescription>
-                  Conversation with {selectedThread.thread.participants.map(p => p.user.name).join(', ')}
+                  {selectedThread.createdAt ? formatDistanceToNow(selectedThread.createdAt, { addSuffix: true }) : 'Unknown time'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
                 <div className="space-y-4">
-                  <ScrollArea className="h-[260px] sm:h-[320px] pr-4">
-                    <div className="space-y-3">
-                      {selectedThread.thread.messages.map((msg) => (
-                        <div key={msg.id} className="p-3 rounded-lg bg-muted">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="font-medium text-sm">{msg.senderName || 'Unknown'}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {msg.createdAt ? formatDistanceToNow(msg.createdAt, { addSuffix: true }) : 'Unknown time'}
-                            </span>
-                          </div>
-                          <p className="text-sm">{msg.content || 'No content'}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-sm">{selectedThread.message || 'No content'}</p>
+                  </div>
                   
                   <div className="pt-4 border-t">
                     <p className="text-sm text-muted-foreground mb-2">
@@ -424,7 +394,7 @@ export default function TenantMessagesPage() {
                   <span className="text-sm text-muted-foreground">This Week</span>
                   <span className="font-medium">
                     {messages.filter(m => {
-                      const messageDate = new Date(m.thread.createdAt);
+                      const messageDate = new Date(m.createdAt);
                       const weekAgo = new Date();
                       weekAgo.setDate(weekAgo.getDate() - 7);
                       return messageDate > weekAgo;

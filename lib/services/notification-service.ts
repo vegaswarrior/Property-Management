@@ -1,6 +1,11 @@
 import { prisma } from '@/db/prisma';
 import { decryptField } from '@/lib/encrypt';
-import { sendBrandedEmail } from './email-service';
+
+// Dynamic import to avoid bundling nodemailer in client
+const getEmailService = async () => {
+  const { sendBrandedEmail } = await import('./email-service');
+  return { sendBrandedEmail };
+};
 
 interface NotificationOptions {
   userId: string;
@@ -127,6 +132,7 @@ export class NotificationService {
     }
 
     try {
+      const { sendBrandedEmail } = await getEmailService();
       await sendBrandedEmail({
         to: user.email,
         subject: title,

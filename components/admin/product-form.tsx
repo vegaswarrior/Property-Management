@@ -17,6 +17,8 @@ import { UploadButton } from '@/lib/uploadthing';
 import { Card, CardContent } from '../ui/card';
 import Image from 'next/image';
 import { z } from 'zod';
+import { useSubscriptionContext } from '@/components/subscription/subscription-provider';
+import { SubscriptionTier } from '@/lib/config/subscription-tiers';
 
 const ProductForm = ({
   type,
@@ -29,6 +31,7 @@ const ProductForm = ({
 }) => {
   const router = useRouter();
   const { toast } = useToast();
+  const { showUpgradeModal } = useSubscriptionContext();
 
   const form = useForm<z.infer<typeof insertProductSchema>>({
     resolver:
@@ -42,7 +45,7 @@ const ProductForm = ({
   const onSubmit: SubmitHandler<z.infer<typeof insertProductSchema>> = async (
     values
   ) => {
-    let res;
+    let res: any;
     if (type === 'Create') {
       res = await createProduct(values);
     } else if (productId) {
@@ -50,6 +53,17 @@ const ProductForm = ({
     }
 
     if (!res?.success) {
+      // Check if this is a subscription limit error
+      if (res?.subscriptionError) {
+        showUpgradeModal({
+          currentTier: res.currentTier as SubscriptionTier,
+          currentUnitCount: res.currentUnitCount,
+          unitLimit: res.unitLimit,
+          reason: 'unit_limit',
+        });
+        return;
+      }
+      
       toast({
         variant: 'destructive',
         description: res?.message || 'Something went wrong',

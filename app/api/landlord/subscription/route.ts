@@ -32,8 +32,33 @@ export async function GET() {
       where: { landlordId: landlord.id },
     });
 
-    const currentTier = subscription?.tier || landlord.subscriptionTier || 'free';
+    // Normalize legacy tier names (growth, professional) to new structure
+    const rawTier = subscription?.tier || landlord.subscriptionTier || 'free';
+    const currentTier = rawTier === 'growth' || rawTier === 'professional' ? 'pro' : rawTier;
     const tierConfig = SUBSCRIPTION_TIERS[currentTier as keyof typeof SUBSCRIPTION_TIERS];
+
+    if (!tierConfig) {
+      // Fallback to free if tier is invalid
+      const fallbackConfig = SUBSCRIPTION_TIERS.free;
+      return NextResponse.json({
+        success: true,
+        subscription: {
+          tier: 'free',
+          tierName: fallbackConfig.name,
+          status: subscription?.status || 'active',
+          unitLimit: fallbackConfig.unitLimit,
+          currentUnitCount: unitCount,
+          unitsRemaining: Math.max(0, fallbackConfig.unitLimit - unitCount),
+          nearLimit: false,
+          atLimit: false,
+          upgradeTier: 'pro',
+          upgradeTierConfig: SUBSCRIPTION_TIERS.pro,
+          features: fallbackConfig.features,
+          currentPeriodEnd: subscription?.currentPeriodEnd,
+          cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd,
+        },
+      });
+    }
 
     const nearLimit = isNearUnitLimit(unitCount, currentTier as keyof typeof SUBSCRIPTION_TIERS);
     const atLimit = isAtUnitLimit(unitCount, currentTier as keyof typeof SUBSCRIPTION_TIERS);

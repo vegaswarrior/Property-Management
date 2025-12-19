@@ -27,9 +27,16 @@ interface EmailOptions {
 
 export async function sendBrandedEmail({ to, subject, template, data, landlordId }: EmailOptions) {
   try {
-    // Get landlord information for branding
+    // Get landlord information for branding (including logo)
     const landlord = await prisma.landlord.findUnique({
       where: { id: landlordId },
+      select: {
+        id: true,
+        name: true,
+        subdomain: true,
+        logoUrl: true,
+        useSubdomain: true,
+      },
     });
 
     if (!landlord) {
@@ -44,9 +51,17 @@ export async function sendBrandedEmail({ to, subject, template, data, landlordId
     const subdomain = landlord.subdomain;
     const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000';
     
-    // Create branded email address
-    fromEmail = `noreply@${subdomain}.${rootDomain}`;
-    fromName = landlord.name;
+    // Create branded email address from subdomain
+    // If subdomain exists and useSubdomain is enabled, use it
+    // Otherwise, fall back to main domain
+    if (landlord.useSubdomain && subdomain) {
+      fromEmail = `noreply@${subdomain}.${rootDomain}`;
+    } else {
+      // Fallback to main domain
+      fromEmail = process.env.SMTP_USER || `noreply@${rootDomain}`;
+    }
+    
+    fromName = landlord.name || 'Property Management';
 
     switch (template) {
       case 'rent-reminder':

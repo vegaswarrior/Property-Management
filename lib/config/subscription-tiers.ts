@@ -4,65 +4,119 @@ export const SUBSCRIPTION_TIERS = {
     price: 0,
     priceId: null,
     unitLimit: 24,
+    noCashoutFees: false, // Free tier pays $2 platform fee on cashouts
     features: {
+      automaticRentReminders: false,
+      automaticLateFees: false,
+      employmentChecksPerMonth: 0,
+      teamManagement: false,
+      teamCommunications: false,
       freeBackgroundChecks: false,
       freeEvictionChecks: false,
       freeEmploymentVerification: false,
+      customBranding: false,
+      apiAccess: false,
+      webhooks: false,
     },
     description: 'Perfect for small landlords with up to 24 units',
   },
-  growth: {
-    name: 'Growth',
+  pro: {
+    name: 'Pro',
     price: 29.99,
-    priceId: process.env.STRIPE_PRICE_GROWTH || null,
-    unitLimit: 75,
+    priceId: process.env.STRIPE_PRICE_PRO || null,
+    unitLimit: 250,
+    noCashoutFees: true, // Paid tier - no platform cashout fees (only Stripe fees)
     features: {
+      automaticRentReminders: true,
+      automaticLateFees: true,
+      employmentChecksPerMonth: Infinity,
+      teamManagement: true,
+      teamCommunications: true,
       freeBackgroundChecks: true,
       freeEvictionChecks: true,
       freeEmploymentVerification: true,
+      customBranding: false,
+      apiAccess: false,
+      webhooks: false,
     },
-    description: 'For growing portfolios with 25-75 units',
-  },
-  professional: {
-    name: 'Professional',
-    price: 79.99,
-    priceId: process.env.STRIPE_PRICE_PROFESSIONAL || null,
-    unitLimit: 200,
-    features: {
-      freeBackgroundChecks: true,
-      freeEvictionChecks: true,
-      freeEmploymentVerification: true,
-    },
-    description: 'For professionals managing 76-200 units',
+    description: 'Everything you need for 25-250 units with full team features',
   },
   enterprise: {
     name: 'Enterprise',
     price: null,
     priceId: null,
     unitLimit: Infinity,
+    noCashoutFees: true,
     features: {
+      automaticRentReminders: true,
+      automaticLateFees: true,
+      employmentChecksPerMonth: Infinity,
+      teamManagement: true,
+      teamCommunications: true,
       freeBackgroundChecks: true,
       freeEvictionChecks: true,
       freeEmploymentVerification: true,
+      customBranding: true,
+      apiAccess: true,
+      webhooks: true,
     },
-    description: 'Custom pricing for 200+ units. Contact us for a quote.',
+    description: 'Custom branding, API access, and webhooks. Contact us for pricing.',
   },
 } as const;
 
 export type SubscriptionTier = keyof typeof SUBSCRIPTION_TIERS;
+export type TierFeatures = typeof SUBSCRIPTION_TIERS[SubscriptionTier]['features'];
+
+/**
+ * Normalize legacy tier names to current tier names
+ * Maps old 'growth' and 'professional' tiers to 'pro'
+ */
+export function normalizeTier(tier: string | null | undefined): SubscriptionTier {
+  if (!tier) return 'free';
+  
+  // Map legacy tiers to new structure
+  const tierMap: Record<string, SubscriptionTier> = {
+    'free': 'free',
+    'growth': 'pro',      // Legacy: map to pro
+    'professional': 'pro', // Legacy: map to pro
+    'pro': 'pro',
+    'enterprise': 'enterprise',
+  };
+  
+  return tierMap[tier.toLowerCase()] || 'free';
+}
 
 export function getTierForUnitCount(unitCount: number): SubscriptionTier {
   if (unitCount <= 24) return 'free';
-  if (unitCount <= 75) return 'growth';
-  if (unitCount <= 200) return 'professional';
+  if (unitCount <= 250) return 'pro';
   return 'enterprise';
 }
 
 export function getRequiredTierForUnitCount(unitCount: number): SubscriptionTier {
   if (unitCount <= 24) return 'free';
-  if (unitCount <= 75) return 'growth';
-  if (unitCount <= 200) return 'professional';
+  if (unitCount <= 250) return 'pro';
   return 'enterprise';
+}
+
+export function hasFeatureAccess(
+  tier: SubscriptionTier,
+  feature: keyof TierFeatures
+): boolean {
+  const tierConfig = SUBSCRIPTION_TIERS[tier];
+  const featureValue = tierConfig.features[feature];
+  if (typeof featureValue === 'boolean') return featureValue;
+  if (typeof featureValue === 'number') return featureValue > 0;
+  return false;
+}
+
+export function getFeatureLimit(
+  tier: SubscriptionTier,
+  feature: keyof TierFeatures
+): number {
+  const tierConfig = SUBSCRIPTION_TIERS[tier];
+  const featureValue = tierConfig.features[feature];
+  if (typeof featureValue === 'number') return featureValue;
+  return featureValue ? Infinity : 0;
 }
 
 export function canAddUnit(currentUnitCount: number, currentTier: SubscriptionTier): boolean {
@@ -88,12 +142,18 @@ export function isAtUnitLimit(currentUnitCount: number, tier: SubscriptionTier):
 export function getUpgradeTier(currentTier: SubscriptionTier): SubscriptionTier | null {
   switch (currentTier) {
     case 'free':
-      return 'growth';
-    case 'growth':
-      return 'professional';
-    case 'professional':
+      return 'pro';
+    case 'pro':
       return 'enterprise';
     case 'enterprise':
       return null;
   }
+}
+
+/**
+ * Check if a tier has no platform cashout fees
+ * Growth, Professional, and Enterprise tiers only pay Stripe's fees
+ */
+export function hasNoCashoutFees(tier: SubscriptionTier): boolean {
+  return SUBSCRIPTION_TIERS[tier].noCashoutFees;
 }

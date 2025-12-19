@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/db/prisma';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { randomUUID } from 'crypto';
+import { extractTextFromImage } from '@/lib/services/ocr-service';
 
 function isAllowedCategory(category: string) {
   return (
@@ -24,6 +25,87 @@ function isAllowedDocType(docType: string) {
     docType === 'bank_statement' ||
     docType === 'other'
   );
+}
+
+/**
+ * Validates that an uploaded image is actually an ID document
+ * Uses OCR to check for ID-related keywords and patterns
+ */
+async function validateIdDocument(imageBuffer: Buffer, fileName: string): Promise<{ valid: boolean; reason?: string }> {
+  try {
+    // Check file extension
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+    
+    if (!ext || !imageExtensions.includes(ext)) {
+      return { valid: false, reason: 'File must be an image (JPG, PNG, etc.)' };
+    }
+
+    // Convert buffer to base64 data URL for Tesseract
+    const base64 = imageBuffer.toString('base64');
+    const dataUrl = `data:image/${ext};base64,${base64}`;
+
+    // Extract text using OCR
+    const ocrResult = await extractTextFromImage(dataUrl);
+    
+    // Check confidence threshold
+    if (ocrResult.confidence < 30) {
+      return { valid: false, reason: 'Image quality too low. Please upload a clear, well-lit photo of your ID.' };
+    }
+
+    // Normalize extracted text for keyword checking
+    const text = ocrResult.text.toUpperCase();
+    
+    // Check for ID-related keywords
+    const idKeywords = [
+      'DRIVER', 'DRIVERS', 'LICENSE', 'LIC',
+      'STATE ID', 'STATEID', 'IDENTIFICATION',
+      'PASSPORT', 'PASSPORT NO', 'PASSPORT NUMBER',
+      'DATE OF BIRTH', 'DOB', 'BIRTH',
+      'EXPIRES', 'EXPIRATION', 'EXP DATE', 'VALID',
+      'ISSUE DATE', 'ISSUED',
+      'ADDRESS', 'STREET',
+      'HEIGHT', 'WEIGHT', 'SEX', 'GENDER',
+      'ORGAN DONOR', 'DONOR',
+      'CLASS', 'RESTRICTIONS',
+      'ENDORSEMENTS'
+    ];
+
+    const foundKeywords = idKeywords.filter(keyword => text.includes(keyword));
+    
+    // Need at least 3 ID-related keywords to be considered valid
+    if (foundKeywords.length < 3) {
+      return { 
+        valid: false, 
+        reason: 'This does not appear to be a valid ID document. Please upload a clear photo of your driver\'s license, state ID, or passport.' 
+      };
+    }
+
+    // Check for date patterns (MM/DD/YYYY, DD/MM/YYYY, etc.)
+    const datePatterns = [
+      /\d{1,2}\/\d{1,2}\/\d{4}/, // MM/DD/YYYY or DD/MM/YYYY
+      /\d{4}-\d{2}-\d{2}/,        // YYYY-MM-DD
+      /\d{2}\/\d{2}\/\d{2}/,      // MM/DD/YY
+    ];
+    
+    const hasDate = datePatterns.some(pattern => pattern.test(text));
+    
+    if (!hasDate) {
+      return { 
+        valid: false, 
+        reason: 'Could not detect date information in the document. Please ensure your ID is clearly visible.' 
+      };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    console.error('ID validation error:', error);
+    // If OCR fails, reject the upload
+    return { 
+      valid: false, 
+      reason: 'Unable to verify ID document. Please upload a clear, well-lit photo of your ID.' 
+    };
+  }
 }
 
 async function resolveLandlordIdForApplication(application: {
@@ -196,6 +278,17 @@ export async function POST(req: NextRequest) {
     const resourceType = mimeType.startsWith('image/') ? 'image' : 'raw';
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+    // Validate ID documents - ensure they are actual IDs
+    if (category === 'id_verification' && resourceType === 'image') {
+      const validation = await validateIdDocument(fileBuffer, file.name);
+      if (!validation.valid) {
+        return NextResponse.json(
+          { success: false, message: validation.reason || 'Invalid ID document' },
+          { status: 400 }
+        );
+      }
+    }
 
     const publicId = `tenant-applications/${access.landlordId}/${applicationId}/${category}-${docType}-${randomUUID()}`;
 

@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency, formatDateTime, formatNumber } from "@/lib/utils";
 import DashboardOverview from "../admin/overview/dashboard-overview";
+import UserManagement from "@/components/super-admin/user-management";
+import LandlordDetailModal from "@/components/super-admin/landlord-detail-modal";
+import TierManager from "@/components/super-admin/tier-manager";
 
 const views = [
   { id: "overview", label: "Overview" },
@@ -28,6 +31,7 @@ const views = [
   { id: "users", label: "Users & Sessions" },
   { id: "portfolio", label: "Portfolio & Revenue" },
   { id: "management", label: "User Management" },
+  { id: "tiers", label: "Tier Testing" },
 ] as const;
 
 type TopPage = { path: string; _count: { _all: number } };
@@ -77,7 +81,7 @@ type PlatformRevenue = {
   subscriptionRevenue: RentTotals;
   total: RentTotals;
 };
-type SubscriptionBreakdown = { free: number; growth: number; professional: number; enterprise: number };
+type SubscriptionBreakdown = { free: number; pro: number; growth: number; professional: number; enterprise: number };
 
 type SuperAdminInsights = {
   landlordsCount: number;
@@ -104,12 +108,15 @@ type SuperAdminInsights = {
   subscriptionBreakdown?: SubscriptionBreakdown;
 };
 
+type LandlordRow = { id: string; name: string; ownerUserId: string };
+
 interface SuperAdminDashboardProps {
   userEmail: string;
   summary: StoreSummary;
   analytics: AnalyticsSummary;
   insights?: SuperAdminInsights;
   users?: UserRow[];
+  landlords?: LandlordRow[];
   currentUser?: Session["user"];
 }
 
@@ -143,11 +150,13 @@ const SuperAdminDashboard = ({
   analytics,
   insights,
   users,
+  landlords,
   currentUser,
 }: SuperAdminDashboardProps) => {
   const [activeView, setActiveView] = useState<(typeof views)[number]["id"]>("overview");
   const [isClearingStats, startClearingStats] = useTransition();
   const [isDeletingUser, startDeletingUser] = useTransition();
+  const [selectedLandlordId, setSelectedLandlordId] = useState<string | null>(null);
   const [activeTrafficDetail, setActiveTrafficDetail] = useState<
     "today" | "yesterday" | "last7" | null
   >(null);
@@ -265,50 +274,11 @@ const SuperAdminDashboard = ({
   const managementContent = (
     <div className="space-y-6">
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h2 className="text-lg font-semibold tracking-tight">User Management</h2>
-          <p className="text-xs text-muted-foreground">Owner-only deletion. Destructive.</p>
+          <p className="text-xs text-muted-foreground">Manage users, landlords, and tenants</p>
         </div>
-        <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(users || []).length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-sm text-muted-foreground">
-                    No users found.
-                  </TableCell>
-                </TableRow>
-              )}
-              {(users || []).map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell>{u.name || "N/A"}</TableCell>
-                  <TableCell>{u.email}</TableCell>
-                  <TableCell className="capitalize">{u.role || "user"}</TableCell>
-                  <TableCell>{formatDateTime(new Date(u.createdAt)).dateOnly}</TableCell>
-                  <TableCell className="text-right">
-                    <button
-                      type="button"
-                      disabled={isDeletingUser}
-                      onClick={() => handleDeleteUser(u.id)}
-                      className="text-xs font-semibold text-red-500 hover:text-red-600 disabled:opacity-60"
-                    >
-                      {isDeletingUser ? "Deleting..." : "Delete"}
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <UserManagement users={users || []} landlords={landlords || []} />
       </section>
     </div>
   );
@@ -1014,7 +984,7 @@ const SuperAdminDashboard = ({
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold tracking-tight">Subscription Breakdown</h2>
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardContent className="pt-4">
               <p className="text-xs text-muted-foreground mb-1">Free Tier</p>
@@ -1025,24 +995,20 @@ const SuperAdminDashboard = ({
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground mb-1">Growth ($29.99/mo)</p>
+              <p className="text-xs text-muted-foreground mb-1">Pro ($29.99/mo)</p>
               <p className="text-2xl font-semibold text-violet-400">
-                {formatNumber(insights?.subscriptionBreakdown?.growth ?? 0)}
+                {formatNumber(
+                  (insights?.subscriptionBreakdown?.pro ?? 0) +
+                  (insights?.subscriptionBreakdown?.growth ?? 0) +
+                  (insights?.subscriptionBreakdown?.professional ?? 0)
+                )}
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground mb-1">Professional ($79.99/mo)</p>
-              <p className="text-2xl font-semibold text-violet-400">
-                {formatNumber(insights?.subscriptionBreakdown?.professional ?? 0)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground mb-1">Enterprise</p>
-              <p className="text-2xl font-semibold text-violet-400">
+              <p className="text-xs text-muted-foreground mb-1">Enterprise (Custom)</p>
+              <p className="text-2xl font-semibold text-amber-400">
                 {formatNumber(insights?.subscriptionBreakdown?.enterprise ?? 0)}
               </p>
             </CardContent>
@@ -1163,8 +1129,7 @@ const SuperAdminDashboard = ({
                     <TableCell>
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                         ll.subscriptionTier === 'enterprise' ? 'bg-amber-100 text-amber-800' :
-                        ll.subscriptionTier === 'professional' ? 'bg-violet-100 text-violet-800' :
-                        ll.subscriptionTier === 'growth' ? 'bg-emerald-100 text-emerald-800' :
+                        ll.subscriptionTier === 'pro' ? 'bg-violet-100 text-violet-800' :
                         'bg-slate-100 text-slate-800'
                       }`}>
                         {ll.subscriptionTier || 'free'}
@@ -1271,15 +1236,65 @@ const SuperAdminDashboard = ({
     </div>
   );
 
+  const tiersContent = (
+    <div className="space-y-6">
+      <section className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">Tier Testing</h1>
+        <p className="text-sm text-muted-foreground">
+          Manually set subscription tiers for landlords to test tier-specific features without Stripe CLI.
+        </p>
+      </section>
+      <TierManager />
+    </div>
+  );
+
   let content = overviewContent;
   if (activeView === "traffic") content = trafficContent;
   else if (activeView === "engagement") content = engagementContent;
   else if (activeView === "users") content = usersContent;
   else if (activeView === "portfolio") content = portfolioContent;
+  else if (activeView === "management") content = managementContent;
+  else if (activeView === "tiers") content = tiersContent;
 
   return (
-    <div className="flex gap-6">
-      <aside className="w-52 shrink-0 space-y-4">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+      {/* Mobile Navigation */}
+      <div className="lg:hidden">
+        <Card className="bg-slate-900 border-slate-800">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold">Super Admin</h2>
+              <button
+                type="button"
+                onClick={handleClearStatistics}
+                disabled={isClearingStats}
+                className="rounded-md bg-red-500/90 text-xs font-semibold text-white px-3 py-1.5 hover:bg-red-600 disabled:opacity-60"
+              >
+                {isClearingStats ? "Clearing..." : "Clear Stats"}
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {views.map((view) => (
+                <button
+                  key={view.id}
+                  type="button"
+                  onClick={() => setActiveView(view.id)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                    activeView === view.id
+                      ? "bg-slate-700 text-slate-50"
+                      : "bg-slate-800/50 text-slate-300 hover:bg-slate-800"
+                  }`}
+                >
+                  {view.label}
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:block w-52 shrink-0 space-y-4">
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Super Admin</CardTitle>
@@ -1303,10 +1318,9 @@ const SuperAdminDashboard = ({
               type="button"
               onClick={() => setActiveView(view.id)}
               className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition ${
-                {
-                  true: "bg-slate-800 text-slate-50",
-                  false: "text-slate-300 hover:bg-slate-800/60 hover:text-slate-50",
-                }[String(activeView === view.id) as "true" | "false"]
+                activeView === view.id
+                  ? "bg-slate-800 text-slate-50"
+                  : "text-slate-300 hover:bg-slate-800/60 hover:text-slate-50"
               }`}
             >
               <span>{view.label}</span>
@@ -1314,7 +1328,16 @@ const SuperAdminDashboard = ({
           ))}
         </nav>
       </aside>
+
+      {/* Main Content */}
       <main className="flex-1 min-w-0 space-y-6">{content}</main>
+
+      {/* Landlord Detail Modal */}
+      <LandlordDetailModal
+        landlordId={selectedLandlordId}
+        isOpen={!!selectedLandlordId}
+        onClose={() => setSelectedLandlordId(null)}
+      />
     </div>
   );
 };

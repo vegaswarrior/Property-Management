@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { updateOrderToPaid } from '@/lib/actions/order-actions';
 import { prisma } from '@/db/prisma';
 import { SUBSCRIPTION_TIERS, SubscriptionTier } from '@/lib/config/subscription-tiers';
+import { NotificationService } from '@/lib/services/notification-service';
 
 export async function POST(req: NextRequest) {
   const payload = await req.text();
@@ -43,6 +44,36 @@ export async function POST(req: NextRequest) {
         ? parseFloat(charge.metadata.convenienceFee) / 100 
         : 0;
 
+      const updatedPayments = await prisma.rentPayment.findMany({
+        where: {
+          stripePaymentIntentId: paymentIntentId,
+        },
+        include: {
+          lease: {
+            include: {
+              unit: {
+                include: {
+                  property: {
+                    include: {
+                      landlord: {
+                        include: {
+                          owner: {
+                            select: { id: true },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          tenant: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
       await prisma.rentPayment.updateMany({
         where: {
           stripePaymentIntentId: paymentIntentId,
@@ -54,6 +85,24 @@ export async function POST(req: NextRequest) {
           convenienceFee: convenienceFee,
         },
       });
+
+      // Notify landlord about successful payment
+      for (const payment of updatedPayments) {
+        const landlordId = payment.lease.unit.property.landlordId;
+        const landlord = payment.lease.unit.property.landlord;
+        
+        if (landlord?.owner?.id && landlordId) {
+          await NotificationService.createNotification({
+            userId: landlord.owner.id,
+            type: 'payment',
+            title: 'Rent Payment Received',
+            message: `Payment of $${payment.amount.toFixed(2)} received from ${payment.tenant.name} for ${payment.lease.unit.property.name} - ${payment.lease.unit.name}`,
+            actionUrl: `/admin/analytics`,
+            metadata: { paymentId: payment.id, leaseId: payment.leaseId },
+            landlordId,
+          });
+        }
+      }
     }
 
     return NextResponse.json({

@@ -409,6 +409,54 @@ export default async function AdminApplicationDetailPage({ params }: AdminApplic
                         notes: combinedNotes,
                       },
                     });
+
+                    // Notify tenant about application approval
+                    if (freshApp.applicantId) {
+                      const { NotificationService } = await import('@/lib/services/notification-service');
+                      const { sendApplicationStatusUpdate } = await import('@/lib/services/email-service');
+                      const property = await tx.property.findFirst({
+                        where: { slug: freshApp.propertySlug || '' },
+                        include: { 
+                          landlord: true,
+                        },
+                      });
+                      const applicant = await tx.user.findUnique({
+                        where: { id: freshApp.applicantId },
+                        select: { name: true, email: true },
+                      });
+
+                      if (property?.landlord && applicant) {
+                        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+                        const leaseUrl = `${baseUrl}/user/profile/lease`;
+
+                        // Create in-app notification
+                        await NotificationService.createNotification({
+                          userId: freshApp.applicantId,
+                          type: 'application',
+                          title: 'Application Approved! 🎉',
+                          message: `Great news! Your application for ${property.name}${unit ? ` - ${unit.name}` : ''} has been approved. A lease has been created and is ready for you to review.`,
+                          actionUrl: `/user/profile/lease`,
+                          metadata: { applicationId: application.id, leaseId: lease.id },
+                          landlordId: property.landlord.id,
+                        });
+
+                        // Send email notification
+                        try {
+                          await sendApplicationStatusUpdate(
+                            applicant.email,
+                            applicant.name,
+                            property.name,
+                            unit?.name || 'Unit',
+                            'approved',
+                            combinedNotes || 'Your application has been approved. A lease has been created and is ready for you to review.',
+                            property.landlord.id,
+                            leaseUrl
+                          );
+                        } catch (emailError) {
+                          console.error('Failed to send approval email:', emailError);
+                        }
+                      }
+                    }
                   });
                 } else {
                   await prisma.rentalApplication.update({
@@ -418,6 +466,62 @@ export default async function AdminApplicationDetailPage({ params }: AdminApplic
                       notes: combinedNotes,
                     },
                   });
+
+                  // Notify tenant about application status change (rejected/withdrawn)
+                  if (application.applicantId && (nextStatus === 'rejected' || nextStatus === 'withdrawn')) {
+                    const { NotificationService } = await import('@/lib/services/notification-service');
+                    const { sendApplicationStatusUpdate } = await import('@/lib/services/email-service');
+                    const property = await prisma.property.findFirst({
+                      where: { slug: application.propertySlug || '' },
+                      include: { landlord: true },
+                    });
+                    const applicant = await prisma.user.findUnique({
+                      where: { id: application.applicantId },
+                      select: { name: true, email: true },
+                    });
+
+                    if (property?.landlord && applicant) {
+                      const statusMessage = nextStatus === 'rejected' 
+                        ? 'Unfortunately, your application has been rejected' 
+                        : 'Your application has been withdrawn';
+                      const adminMessage = combinedNotes?.split('\n\nAdmin response: ')[1] || '';
+                      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+                      const applicationUrl = `${baseUrl}/user/profile/application`;
+                      
+                      // Create in-app notification
+                      await NotificationService.createNotification({
+                        userId: application.applicantId,
+                        type: 'application',
+                        title: `Application ${nextStatus === 'rejected' ? 'Rejected' : 'Withdrawn'}`,
+                        message: `${statusMessage} for ${property.name}. ${adminMessage ? 'Message: ' + adminMessage : ''}`,
+                        actionUrl: `/user/profile/application`,
+                        metadata: { applicationId: application.id },
+                        landlordId: property.landlord.id,
+                      });
+
+                      // Get unit name if available
+                      const unitForRejection = await prisma.unit.findUnique({
+                        where: { id: application.unitId || '' },
+                        select: { name: true },
+                      }).catch(() => null);
+
+                      // Send email notification
+                      try {
+                        await sendApplicationStatusUpdate(
+                          applicant.email,
+                          applicant.name,
+                          property.name,
+                          unitForRejection?.name || application.unit?.name || 'Unit',
+                          nextStatus as 'rejected' | 'withdrawn',
+                          adminMessage || statusMessage,
+                          property.landlord.id,
+                          applicationUrl
+                        );
+                      } catch (emailError) {
+                        console.error('Failed to send status update email:', emailError);
+                      }
+                    }
+                  }
                 }
 
                 // Revalidate all relevant paths and redirect

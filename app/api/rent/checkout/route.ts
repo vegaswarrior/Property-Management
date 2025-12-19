@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/db/prisma';
 import Stripe from 'stripe';
+import { getTenantPaymentTransparency, compareTenantPaymentMethods } from '@/lib/utils/stripe-transparency';
 import { getConvenienceFeeInCents } from '@/lib/config/platform-fees';
 
 /**
  * Rent checkout API - works with path-based routing
  * Landlord is determined from the rent payment's property, not from subdomain
+ * 
+ * TRANSPARENCY: Tenants see exact breakdown of:
+ * - Rent amount
+ * - Platform convenience fee
+ * - Stripe processing fees
+ * - Total to pay
+ * - Money landlord receives
  */
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -16,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null) as
-    | { rentPaymentIds?: string[]; paymentMethodType?: 'ach' | 'card' }
+    | { rentPaymentIds?: string[] }
     | null;
 
   if (!body?.rentPaymentIds || !Array.isArray(body.rentPaymentIds) || body.rentPaymentIds.length === 0) {
@@ -73,10 +81,9 @@ export async function POST(req: NextRequest) {
     select: { stripeConnectAccountId: true },
   });
 
-  // Get convenience fee based on payment method type
-  // Default to 'card' to show the convenience fee, but ACH will be free
-  const paymentMethodType = body.paymentMethodType || 'card';
-  const convenienceFee = getConvenienceFeeInCents(paymentMethodType);
+  // Get convenience fee - using 'card' as default (max fee)
+  // Actual fee will be adjusted on client based on selected payment method
+  const convenienceFee = getConvenienceFeeInCents('card');
   const rentAmountInCents = Math.round(totalAmount * 100);
   const totalWithFee = rentAmountInCents + convenienceFee;
 
@@ -95,12 +102,16 @@ export async function POST(req: NextRequest) {
       maxConvenienceFee: getConvenienceFeeInCents('card').toString(), // Max possible fee
     },
     // Use automatic_payment_methods for card, ACH, Link, Apple Pay, Google Pay
-    automatic_payment_methods: {
-      enabled: true,
-      allow_redirects: 'never', // Keep everything in-page
-    },
+    // Rely on Stripe's automatic payment methods rather than specifying
+    // `payment_method_types` to avoid API conflicts.
+    payment_method_types: ['card', 'link', 'us_bank_account'],
     // ACH requires customer email for mandate
     receipt_email: session.user.email || undefined,
+    payment_method_options: {
+      us_bank_account: {
+        verification_method: 'automatic',
+      },
+    },
   };
 
   // If landlord has Stripe Connect account, charge them directly with application fee
@@ -122,11 +133,43 @@ export async function POST(req: NextRequest) {
       data: { stripePaymentIntentId: paymentIntent.id },
     });
 
+    // Get transparency info - use 'CARD' as the default shown method
+    const transparency = getTenantPaymentTransparency(totalAmount, 'CARD');
+    const comparisons = compareTenantPaymentMethods(totalAmount);
+
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      
+      // TRANSPARENCY: What tenant will pay
       convenienceFee: convenienceFee / 100, // Return as dollars
       rentAmount: totalAmount,
       totalAmount: totalWithFee / 100,
+      
+      // TRANSPARENCY: Detailed breakdown
+      transparency: {
+        rentAmount: transparency.rentAmount,
+        platformFee: transparency.platformFee,
+        stripeFee: transparency.stripeFee,
+        totalFees: transparency.totalFees,
+        totalToPay: transparency.totalToPay,
+        breakdown: transparency.breakdown,
+        paymentMethod: transparency.paymentMethod,
+        timeline: transparency.timeline,
+        processingTime: transparency.processingTime,
+      },
+      
+      // TRANSPARENCY: Compare all payment methods
+      paymentMethodComparisons: comparisons.map(m => ({
+        name: m.name,
+        type: m.type,
+        fee: m.fee,
+        total: m.total,
+        savings: m.savings,
+        timeline: m.timeline,
+        description: m.description,
+        recommended: m.recommended,
+      })),
     });
   } catch (error) {
     console.error('Stripe payment intent creation failed:', error);

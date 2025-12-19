@@ -63,8 +63,13 @@ export default function ApplicationPage() {
       return;
     }
     if (!res.ok) {
+      const error = await res.json();
+      alert(error.message || "Failed to submit application. Please try again.");
       return;
     }
+    
+    // Redirect to tenant dashboard after successful submission
+    window.location.href = "/user/dashboard";
     setSubmitted(true);
   };
 

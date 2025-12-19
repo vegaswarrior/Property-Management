@@ -264,9 +264,11 @@ export async function getSuperAdminInsights() {
 
     const subscriptionBreakdown = {
       free: landlords.filter(l => (l.subscription?.tier || l.subscriptionTier || 'free') === 'free').length,
+      pro: landlords.filter(l => (l.subscription?.tier || l.subscriptionTier) === 'pro').length,
+      enterprise: landlords.filter(l => (l.subscription?.tier || l.subscriptionTier) === 'enterprise').length,
+      // Legacy support - count old tiers as pro
       growth: landlords.filter(l => (l.subscription?.tier || l.subscriptionTier) === 'growth').length,
       professional: landlords.filter(l => (l.subscription?.tier || l.subscriptionTier) === 'professional').length,
-      enterprise: landlords.filter(l => (l.subscription?.tier || l.subscriptionTier) === 'enterprise').length,
     };
 
     const collectionRate =
@@ -359,7 +361,7 @@ export async function getSuperAdminInsights() {
 
 export async function listUsersForSuperAdmin(limit = 100) {
   await requireSuperAdmin();
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     orderBy: { createdAt: 'desc' },
     take: limit,
     select: {
@@ -368,6 +370,21 @@ export async function listUsersForSuperAdmin(limit = 100) {
       email: true,
       role: true,
       createdAt: true,
+    },
+  });
+  
+  // Add isBlocked field if it exists (may not exist before migration)
+  return users.map(u => ({ ...u, isBlocked: (u as any).isBlocked || false }));
+}
+
+export async function listLandlordsForSuperAdmin() {
+  await requireSuperAdmin();
+  return prisma.landlord.findMany({
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      name: true,
+      ownerUserId: true,
     },
   });
 }

@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { requireAdmin } from '@/lib/auth-guard';
 import { getOrCreateCurrentLandlord } from '@/lib/actions/landlord.actions';
-import PayoutsConnectButton from '@/components/admin/payouts-connect-button';
+import PayoutsVerificationPanel from '@/components/admin/payouts-verification-panel';
 
 export const metadata: Metadata = {
   title: 'Connect payouts',
@@ -66,11 +66,8 @@ const PayoutsOnboardingPage = async () => {
             <li>You&apos;ll add a bank account (standard payouts) and/or a debit card (instant cashouts).</li>
             <li>You can return here any time from Settings to review payout status.</li>
           </ul>
-          <div className='pt-3 flex flex-wrap items-center gap-3 text-sm'>
-            <PayoutsConnectButton />
-            <span className='text-[11px] text-slate-500'>
-              We&apos;ll keep you on this site and talk to Stripe securely in the background.
-            </span>
+          <div className='pt-3'>
+            <PayoutsVerificationPanel />
           </div>
         </section>
       </div>

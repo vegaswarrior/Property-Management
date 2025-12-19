@@ -1,11 +1,9 @@
 generator client {
   provider = "prisma-client-js"
 }
-
 datasource db {
   provider = "postgresql"
 }
-
 model Product {
   id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
@@ -51,9 +49,14 @@ model User {
   billingAddress      Json?                            @db.Json
   address             Json?                            @db.Json
   paymentMethod       String?
+  stripeCustomerId    String?
   phoneNumber         String?
   phoneVerified       DateTime?                        @db.Timestamp(6)
   notificationPreferences Json?                         @db.Json // { email: boolean, sms: boolean, both: boolean }
+  isBlocked           Boolean                          @default(false)
+  blockedAt           DateTime?                        @db.Timestamp(6)
+  blockedBy           String?                          @db.Uuid
+  blockedReason       String?
   createdAt           DateTime                         @default(now()) @db.Timestamp(6)
   updatedAt           DateTime                         @updatedAt
   account             Account[]
@@ -1179,4 +1182,135 @@ model SubscriptionEvent {
   @@index([landlordId])
   @@index([eventType])
   @@index([createdAt])
+}
+
+// Employment verification tracking for subscription limits
+model EmploymentCheck {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landlordId    String   @db.Uuid
+  applicationId String   @db.Uuid
+  status        String   @default("pending") // pending, completed, failed
+  result        Json?    @db.Json
+  createdAt     DateTime @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime @updatedAt
+
+  @@index([landlordId])
+  @@index([applicationId])
+  @@index([createdAt])
+}
+
+// Team management for Professional tier
+model TeamMember {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landlordId    String   @db.Uuid
+  userId        String   @db.Uuid
+  role          String   @default("member") // owner, admin, member
+  permissions   String[] @default([]) // view_properties, manage_tenants, manage_maintenance, manage_finances
+  invitedEmail  String?
+  inviteToken   String?  @unique
+  inviteExpires DateTime? @db.Timestamp(6)
+  status        String   @default("pending") // pending, active, inactive
+  joinedAt      DateTime? @db.Timestamp(6)
+  createdAt     DateTime @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime @updatedAt
+
+  @@unique([landlordId, userId])
+  @@index([landlordId])
+  @@index([userId])
+  @@index([inviteToken])
+}
+
+// Team communication channels (Slack-like)
+model TeamChannel {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landlordId    String   @db.Uuid
+  name          String
+  description   String?
+  type          String   @default("public") // public, private, direct
+  createdById   String   @db.Uuid
+  createdAt     DateTime @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime @updatedAt
+
+  messages      TeamMessage[]
+  members       TeamChannelMember[]
+
+  @@index([landlordId])
+}
+
+model TeamChannelMember {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  channelId     String   @db.Uuid
+  userId        String   @db.Uuid
+  role          String   @default("member") // admin, member
+  lastReadAt    DateTime? @db.Timestamp(6)
+  joinedAt      DateTime @default(now()) @db.Timestamp(6)
+
+  channel       TeamChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+  @@index([channelId])
+  @@index([userId])
+}
+
+model TeamMessage {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  channelId     String   @db.Uuid
+  senderId      String   @db.Uuid
+  content       String
+  attachments   String[] @default([])
+  isEdited      Boolean  @default(false)
+  editedAt      DateTime? @db.Timestamp(6)
+  createdAt     DateTime @default(now()) @db.Timestamp(6)
+
+  channel       TeamChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([channelId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+// Automatic rent reminder settings
+model RentReminderSettings {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landlordId            String   @unique @db.Uuid
+  enabled               Boolean  @default(false)
+  reminderDaysBefore    Int[]    @default([7, 3, 1]) // Days before due date to send reminders
+  reminderChannels      String[] @default(["email"]) // email, sms, push
+  customMessage         String?
+  createdAt             DateTime @default(now()) @db.Timestamp(6)
+  updatedAt             DateTime @updatedAt
+
+  @@index([landlordId])
+}
+
+// Automatic late fee settings
+model LateFeeSettings {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landlordId            String   @unique @db.Uuid
+  enabled               Boolean  @default(false)
+  gracePeriodDays       Int      @default(5) // Days after due date before late fee applies
+  feeType               String   @default("flat") // flat, percentage
+  feeAmount             Decimal  @db.Decimal(12, 2) // Flat amount or percentage
+  maxFee                Decimal? @db.Decimal(12, 2) // Maximum late fee cap
+  recurringFee          Boolean  @default(false) // Apply fee daily/weekly after grace period
+  recurringInterval     String?  // daily, weekly
+  notifyTenant          Boolean  @default(true)
+  createdAt             DateTime @default(now()) @db.Timestamp(6)
+  updatedAt             DateTime @updatedAt
+
+  @@index([landlordId])
+}
+
+// Blocked IP addresses for security
+model BlockedIP {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ipAddress     String   @unique
+  reason        String?
+  blockedBy     String?  @db.Uuid
+  expiresAt     DateTime? @db.Timestamp(6) // null = permanent
+  createdAt     DateTime @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime @updatedAt
+
+  @@index([ipAddress])
+  @@index([expiresAt])
 }

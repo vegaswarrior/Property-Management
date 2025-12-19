@@ -12,6 +12,7 @@ export default function RentPayClient({
   totalInCents: number;
 }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [paymentData, setPaymentData] = useState<{
     rentAmount: number;
     convenienceFee: number;
@@ -31,8 +32,7 @@ export default function RentPayClient({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          rentPaymentIds,
-          paymentMethodType: 'card' // Default to card to show max convenience fee
+          rentPaymentIds
         }),
       });
 
@@ -44,6 +44,7 @@ export default function RentPayClient({
 
       const data = (await res.json()) as { 
         clientSecret?: string;
+        paymentIntentId?: string;
         rentAmount?: number;
         convenienceFee?: number;
         totalAmount?: number;
@@ -55,6 +56,7 @@ export default function RentPayClient({
       }
 
       setClientSecret(data.clientSecret);
+      setPaymentIntentId(data.paymentIntentId || null);
       setPaymentData({
         rentAmount: data.rentAmount || 0,
         convenienceFee: data.convenienceFee || 0,
@@ -67,12 +69,13 @@ export default function RentPayClient({
     }
   };
 
-  if (clientSecret && paymentData) {
+    if (clientSecret && paymentData) {
     return (
       <div className='space-y-4'>
         <RentStripePayment 
           totalInCents={Math.round(paymentData.totalAmount * 100)}
           clientSecret={clientSecret}
+          paymentIntentId={paymentIntentId}
           rentAmount={paymentData.rentAmount}
           initialConvenienceFee={paymentData.convenienceFee}
         />

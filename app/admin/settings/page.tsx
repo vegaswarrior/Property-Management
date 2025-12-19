@@ -32,6 +32,19 @@ const AdminSettingsPage = async () => {
         </div>
 
         <div className='grid gap-4 md:grid-cols-2'>
+          <div className='rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-orange-500/10 backdrop-blur-xl p-5 space-y-3'>
+            <h2 className='text-lg font-semibold text-white'>Subscription & Billing</h2>
+            <p className='text-sm text-slate-300/80'>
+              Manage your subscription plan, view usage, and upgrade for more features.
+            </p>
+            <Link
+              href='/admin/settings/subscription'
+              className='inline-flex items-center justify-center rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500'
+            >
+              Manage Subscription
+            </Link>
+          </div>
+
           <div className='rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-xl p-5 space-y-3'>
             <h2 className='text-lg font-semibold text-white'>Branding & Portal</h2>
             <p className='text-sm text-slate-300/80'>

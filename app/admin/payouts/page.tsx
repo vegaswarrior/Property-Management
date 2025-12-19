@@ -4,7 +4,6 @@ import { prisma } from '@/db/prisma';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import PayoutForm from '@/components/admin/payout-form';
-import StripeElementsWrapper from './stripe-elements-wrapper';
 
 const AdminPayoutsPage = async () => {
   await requireAdmin();
@@ -110,7 +109,21 @@ const AdminPayoutsPage = async () => {
         </section>
 
         <section className='space-y-3'>
-          <StripeElementsWrapper />
+          <div className='rounded-2xl border border-slate-200 bg-white p-5 space-y-3'>
+            <div className='flex items-start justify-between gap-4 flex-col md:flex-row'>
+              <div className='space-y-1'>
+                <h2 className='text-sm font-semibold text-slate-900'>Payout method & verification</h2>
+                <p className='text-xs text-slate-600'>
+                  Manage payout verification and add your bank account/debit card inside this app.
+                </p>
+              </div>
+              <Link href='/admin/onboarding/payouts'>
+                <Button className='rounded-full bg-emerald-600 text-white px-6 py-2.5 text-sm font-semibold shadow hover:bg-emerald-500 transition'>
+                  Verify payout account
+                </Button>
+              </Link>
+            </div>
+          </div>
         </section>
 
         <section className='space-y-3'>

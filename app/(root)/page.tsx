@@ -1,18 +1,13 @@
 import { APP_NAME } from '@/lib/constants';
 import CustomerReviews from '@/components/home/customer-reviews';
 import HomeContactCard from '@/components/home/home-contact-card';
+import PricingSection from '@/components/home/pricing-section';
 import { headers } from 'next/headers';
 import { prisma } from '@/db/prisma';
 import Link from 'next/link';
 import Image from 'next/image';
 import { formatCurrency } from '@/lib/utils';
-import { CheckCircle2, Clock, DollarSign, FileText, MessageSquare, Wrench, Building2, Users, CreditCard, Calendar,
-  Shield,
-  Zap,
-  TrendingUp,
-  ArrowRight,
-  Sparkles,
-} from 'lucide-react';
+import { CheckCircle2, Clock, DollarSign, FileText, MessageSquare, Wrench, Building2, Users, CreditCard, Calendar, Shield, Zap, TrendingUp, ArrowRight, Sparkles,} from 'lucide-react';
 
 async function getLandlordForRequest() {
   const headersList = await headers();
@@ -182,21 +177,21 @@ const Homepage = async () => {
                     <ArrowRight className='ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform' />
                   </Link>
                   <Link
-                    href='#how-it-works'
+                    href='#pricing'
                     className='inline-flex items-center justify-center rounded-full border-2 border-white/30 text-white px-6 py-3.5 text-sm font-semibold hover:bg-white/10 hover:border-white/50 transition-all duration-300'
                   >
-                    See How It Works
+                    View Pricing
                   </Link>
                 </div>
                 
                 <div className='flex flex-wrap items-center gap-6 pt-4 text-sm text-slate-300'>
                   <div className='flex items-center gap-2 text-black'>
                     <CheckCircle2 className='h-5 w-5' />
-                    <span>No setup fees</span>
+                    <span>7 Day Free Trial</span>
                   </div>
                   <div className='flex items-center gap-2 text-black'>
                     <CheckCircle2 className='h-5 w-5 text-black' />
-                    <span>Up to 99 units free</span>
+                    <span>Unlimted Units.</span>
                   </div>
                   {/* <div className='flex items-center gap-2'>
                     <CheckCircle2 className='h-5 w-5 text-violet-300' />
@@ -246,24 +241,17 @@ const Homepage = async () => {
                       </div>
                     </div>
                   </div>
-                  <div className='space-y-3 bg-slate-900/60 rounded-xl p-4 border border-white/10'>
-                    {/* <div className='flex items-center justify-between text-sm'>
-                      <span className='font-semibold text-white'>Quick Actions</span>
-                    </div> */}
-                    {/* <div className='grid grid-cols-2 gap-2'>
-                      <button className='text-xs bg-violet-500/20 text-violet-200/80 px-3 py-2 rounded-lg border border-violet-400/40 hover:bg-violet-500/30 transition-colors ring-1 ring-violet-400/40'>
-                        Collect Rent
-                      </button>
-                      <button className='text-xs bg-blue-500/20 text-blue-300 px-3 py-2 rounded-lg border border-blue-500/30 hover:bg-blue-500/30 transition-colors'>
-                        New Lease
-                      </button>
-                    </div> */}
-                  </div>
+                  {/* <div className='space-y-3 bg-slate-900/60 rounded-xl p-4 border border-white/10'>
+    
+                  </div> */}
                 </div>
               </div>
             </div>
           </div>
         </section>
+
+        {/* Pricing Section */}
+        <PricingSection />
 
         {/* Pain Points → Solutions */}
         <section className='w-full py-16 md:py-20 px-4 '>
@@ -512,167 +500,6 @@ const Homepage = async () => {
                   </div>
                 );
               })}
-            </div>
-          </div>
-        </section>
-
-        {/* Pricing - Emphasizing Free */}
-        <section className='w-full py-16 md:py-20 px-4'>
-          <div className='max-w-5xl mx-auto space-y-12'>
-            <div className='text-center space-y-3 animate-in fade-in duration-700'>
-              <h2 className='text-3xl md:text-4xl font-bold text-white'>
-                Start Free. No Forced Subscriptions.
-              </h2>
-              <p className='text-lg text-black font-bold max-w-2xl mx-auto'>
-                Powerful property management for up to 99 units — pay only when rent is collected.
-              </p>
-            </div>
-
-            <div className='grid gap-6 md:grid-cols-3'>
-              <div className='rounded-2xl border-2 border-violet-400/60 bg-violet-500/10 p-8 flex flex-col gap-6 relative overflow-hidden'>
-                <div className='absolute top-0 right-0 bg-violet-500 text-white px-4 py-1 text-xs font-bold rounded-bl-lg'>
-                  MOST POPULAR
-                </div>
-                <div className='space-y-2'>
-                  <h3 className='text-2xl font-bold text-white'>Free Plan</h3>
-                  <p className='text-violet-200/80 text-sm'>Perfect for all landlords</p>
-                </div>
-                <div className='space-y-1'>
-                  <div className='text-5xl font-bold text-white'>$0</div>
-                  <div className='text-violet-200/80 text-sm'>Forever • Up to 24 units</div>
-                </div>
-                <ul className='space-y-3 text-sm text-white flex-1'>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Manage up to 99 units</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Digital leases & legally binding e-signatures</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Maintenance request & ticket system</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>enant applications</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Income & expense tracking</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Financial reports & rent history</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Tenant communication portal</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Mobile-friendly dashboard</span>
-                  </li>
-                </ul>
-                <div className='rounded-lg bg-slate-900/60 border border-white/10 p-3 space-y-1'>
-                  <p className='text-xs font-semibold text-slate-300'>Transaction Fees:</p>
-                  <p className='text-xs text-slate-400'>$2 per rent payment</p>
-                </div>
-                <Link
-                  href='/sign-up'
-                  className='w-full inline-flex items-center justify-center rounded-full bg-violet-500 text-white px-6 py-3 text-sm font-bold hover:bg-violet-400 transition-all duration-300 hover:scale-105'
-                >
-                  Start Free Now
-                  <ArrowRight className='ml-2 h-4 w-4' />
-                </Link>
-              </div>
-
-              <div className='rounded-2xl border border-white/10 bg-slate-950/40 p-8 flex flex-col gap-6'>
-                <div className='space-y-2'>
-                  <h3 className='text-2xl font-bold text-white'>Pro</h3>
-                  <p className='text-slate-300 text-sm'>For growing portfolios that want more control</p>
-                </div>
-                <div className='space-y-1'>
-                  <div className='text-5xl font-bold text-white'>$29.99</div>
-                  <div className='text-slate-300 text-sm'>per month • 25+ units</div>
-                </div>
-                <ul className='space-y-3 text-sm text-slate-300 flex-1'>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Everything in Free</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Advanced analytics & reports</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Automated late fees</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Team access & collaboration</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Priority support</span>
-                  </li>
-                </ul>
-                <div className='rounded-lg bg-slate-900/60 border border-white/10 p-3 space-y-1'>
-                  <p className='text-xs font-semibold text-slate-300'>Transaction Fees:</p>
-                  <p className='text-xs text-slate-400'>$2 per rent payment</p>
-                </div>
-                <Link
-                  href='/contact'
-                  className='w-full inline-flex items-center justify-center rounded-full border-2 border-white/30 text-white px-6 py-3 text-sm font-semibold hover:bg-white/10 transition-all duration-300'
-                >
-                  Get Notified
-                </Link>
-              </div>
-
-              <div className='rounded-2xl border border-white/10 bg-slate-950/40 p-8 flex flex-col gap-6'>
-                <div className='space-y-2'>
-                  <h3 className='text-2xl font-bold text-white'>Enterprise</h3>
-                  <p className='text-slate-300 text-sm'>For property management companies</p>
-                </div>
-                <div className='space-y-1'>
-                  <div className='text-5xl font-bold text-white'>Custom</div>
-                  <div className='text-slate-300 text-sm'>Contact us</div>
-                </div>
-                <ul className='space-y-3 text-sm text-slate-300 flex-1'>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Everything in Pro</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Custom branding & subdomains</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>API access</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Dedicated support</span>
-                  </li>
-                  <li className='flex items-start gap-2'>
-                    <CheckCircle2 className='h-5 w-5 text-violet-300 shrink-0 mt-0.5' />
-                    <span>Custom integrations</span>
-                  </li>
-                </ul>
-                <div className='rounded-lg bg-slate-900/60 border border-white/10 p-3 space-y-1'>
-                  <p className='text-xs font-semibold text-slate-300'>Transaction Fees:</p>
-                  <p className='text-xs text-slate-400'>$2 per rent payment</p>
-                </div>
-                <Link
-                  href='/contact'
-                  className='w-full inline-flex items-center justify-center rounded-full border-2 border-white/30 text-white px-6 py-3 text-sm font-semibold hover:bg-white/10 transition-all duration-300'
-                >
-                  Contact Sales
-                </Link>
-              </div>
             </div>
           </div>
         </section>

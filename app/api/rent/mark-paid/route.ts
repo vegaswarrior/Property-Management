@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = (await req.json().catch(() => null)) as
-    | { paymentIntentId?: string }
+    | { paymentIntentId?: string; email?: string; phone?: string }
     | null;
 
   const paymentIntentId = body?.paymentIntentId;
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     data: {
       status: 'paid',
       paidAt: now,
+      paymentMethod: 'card', // Default to card for this endpoint
     },
   });
 

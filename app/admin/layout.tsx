@@ -6,6 +6,7 @@ import Header from '@/components/shared/header';
 import Footer from '@/components/footer';
 import MobileMenu from '@/components/mobile/mobile-menu';
 import SessionProviderWrapper from '@/components/session-provider-wrapper';
+import { SubscriptionProvider } from '@/components/subscription/subscription-provider';
 
 
 export default function AdminLayout({
@@ -15,6 +16,7 @@ export default function AdminLayout({
 }>) {
   return (
     <SessionProviderWrapper>
+      <SubscriptionProvider>
       <div className='flex min-h-screen flex-col bg-gradient-to-r from-blue-400 via-cyan-400 to-sky-600'>
         <Header />
         <div className='flex flex-1 text-black'>
@@ -69,6 +71,7 @@ export default function AdminLayout({
         </div>
         <Footer />
       </div>
+      </SubscriptionProvider>
     </SessionProviderWrapper>
   );
 }

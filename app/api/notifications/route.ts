@@ -25,18 +25,17 @@ export async function GET(request: NextRequest) {
       ...(includeRead ? {} : { isRead: false }),
     };
 
-    const [notifications, unreadCount] = await Promise.all([
-      prisma.notification.findMany({
+    // Always get unread count
+    const unreadCount = await prisma.notification.count({
+      where: { userId, isRead: false },
+    });
+
+    // Get notifications (with or without read ones based on includeRead)
+    const notifications = await prisma.notification.findMany({
         where: whereClause,
         orderBy: { createdAt: 'desc' },
         take: limit,
-      }),
-      includeRead 
-        ? prisma.notification.count({
-            where: { userId, isRead: false },
-          })
-        : Promise.resolve(0),
-    ]);
+    });
 
     return NextResponse.json({
       notifications,

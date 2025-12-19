@@ -1,80 +1,44 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { loadConnect } from '@stripe/connect-js';
 
-const PayoutsConnectButton = () => {
+const PayoutsConnectEmbedded = ({
+  component = 'account_onboarding',
+}: {
+  component?: 'account_onboarding' | 'payouts';
+}) => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
 
-  const handleClick = async () => {
-    setLoading(true);
-    try {
-      setStripeError(null);
-      setOpen(true);
-    } catch (error) {
-      console.error('Error calling payouts onboarding API', error);
-      toast({
-        variant: 'destructive',
-        description: 'Something went wrong while preparing payouts.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <>
-      <Button
-        type='button'
-        onClick={handleClick}
-        disabled={loading}
-        className='rounded-full bg-emerald-600 text-white px-6 py-2.5 text-sm font-semibold shadow hover:bg-emerald-500 transition'
-      >
-        {loading ? 'Saving payout method…' : 'Add / update payout method'}
-      </Button>
-
-      <Dialog
-        open={open}
-        onOpenChange={(nextOpen) => {
-          setOpen(nextOpen);
-          if (!nextOpen) setStripeError(null);
-        }}
-      >
-        <DialogContent className='max-w-3xl'>
-          <DialogHeader>
-            <DialogTitle>Connect your payout method</DialogTitle>
-          </DialogHeader>
-
-          {stripeError ? (
-            <div className='rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700'>
-              {stripeError}
-            </div>
-          ) : (
-            <EmbeddedStripeOnboarding
-              onError={(message) => setStripeError(message)}
-              onExit={() => {
-                toast({ description: 'Payout setup closed. You can reopen it any time.' });
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+    <div className='space-y-3'>
+      {stripeError ? (
+        <div className='rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700'>
+          {stripeError}
+        </div>
+      ) : (
+        <EmbeddedStripeOnboarding
+          component={component}
+          onError={(message) => setStripeError(message)}
+          onExit={() => {
+            toast({ description: 'Verification closed. You can reopen it any time.' });
+          }}
+        />
+      )}
+    </div>
   );
 };
 
-export default PayoutsConnectButton;
+export default PayoutsConnectEmbedded;
 
 function EmbeddedStripeOnboarding({
+  component,
   onError,
   onExit,
 }: {
+  component: 'account_onboarding' | 'payouts';
   onError: (message: string) => void;
   onExit: () => void;
 }) {
@@ -103,7 +67,7 @@ function EmbeddedStripeOnboarding({
         }
 
         const fetchClientSecret = async () => {
-          const res = await fetch('/api/landlord/stripe/onboard');
+          const res = await fetch(`/api/landlord/stripe/onboard?component=${component}`);
           const data = await res.json();
 
           if (!res.ok || !data?.success || !data?.clientSecret) {
@@ -129,8 +93,10 @@ function EmbeddedStripeOnboarding({
           refreshClientSecret: fetchClientSecret,
         });
 
+        const elementName = component === 'payouts' ? 'payouts' : 'account-onboarding';
+
         const accountOnboarding = stripeConnectInstance.create(
-          'account-onboarding'
+          elementName
         ) as AccountOnboardingElement | null;
 
         if (!accountOnboarding) {
@@ -159,10 +125,10 @@ function EmbeddedStripeOnboarding({
     return () => {
       canceled = true;
     };
-  }, [onError, onExit]);
+  }, [component, onError, onExit]);
 
   return (
-    <div className='min-h-[520px]'>
+    <div className='min-h-[520px] max-h-[70vh] overflow-y-auto'>
       {isInitializing && (
         <div className='py-10 text-sm text-slate-600'>
           Loading secure payout verification…

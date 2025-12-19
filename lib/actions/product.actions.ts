@@ -7,6 +7,7 @@ import { insertProductSchema, updateProductSchema } from '../validators';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { getOrCreateCurrentLandlord } from './landlord.actions';
+import { canAddUnits } from './subscription.actions';
 // Printful sync disabled: imports removed
 
 // Type for variant creation
@@ -268,6 +269,22 @@ export async function createProduct(data: z.infer<typeof insertProductSchema>) {
     // Extract only Product model fields, excluding sizeIds and colorIds (variant metadata)
     const { sizeIds, colorIds, ...productData } = product;
     void colorIds; // suppress unused variable warning
+
+    // Check subscription limits before creating units
+    const unitCount = product.stock || 1;
+    const subscriptionCheck = await canAddUnits(unitCount);
+    
+    if (!subscriptionCheck.allowed) {
+      return {
+        success: false,
+        message: subscriptionCheck.reason,
+        subscriptionError: true,
+        currentUnitCount: subscriptionCheck.currentUnitCount,
+        unitLimit: subscriptionCheck.unitLimit,
+        currentTier: subscriptionCheck.currentTier,
+        upgradeTier: subscriptionCheck.upgradeTier,
+      };
+    }
     
     // create product and optionally create variants from provided sizeIds
     const created = await prisma.product.create({ data: productData });
@@ -291,7 +308,6 @@ export async function createProduct(data: z.infer<typeof insertProductSchema>) {
     // Also create a Property and Unit record for the property management system
     // This enables lease creation when applications are approved
     const propertyType = product.category || 'apartment';
-    const unitCount = product.stock || 1;
     
     // Ensure there is a landlord workspace for this admin
     const landlordResult = await getOrCreateCurrentLandlord();

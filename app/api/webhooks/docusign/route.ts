@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
                 landlordId: true,
                 landlord: {
                   select: {
+                    id: true,
                     ownerUserId: true,
                     name: true,
                   },
@@ -55,13 +56,16 @@ export async function POST(req: NextRequest) {
       });
 
       const landlordUserId = lease.unit.property?.landlord?.ownerUserId;
-      if (landlordUserId) {
+      const landlordId = lease.unit.property?.landlord?.id;
+      if (landlordUserId && landlordId) {
         await NotificationService.createNotification({
           userId: landlordUserId,
-          type: 'application',
+          type: 'reminder',
           title: 'Lease Signed by Tenant',
           message: `${lease.tenant?.name || 'A tenant'} has signed their lease. Please review and sign to complete the agreement.`,
           actionUrl: `/admin/leases/${lease.id}`,
+          metadata: { leaseId: lease.id },
+          landlordId,
         });
       }
 
@@ -74,12 +78,15 @@ export async function POST(req: NextRequest) {
         data: { landlordSignedAt: new Date() },
       });
 
+      const landlordId = lease.unit.property?.landlord?.id;
       await NotificationService.createNotification({
         userId: lease.tenantId,
         type: 'application',
         title: 'Lease Fully Executed',
         message: `Your lease has been fully signed by both parties. You can now proceed with your move-in payments.`,
         actionUrl: `/user/profile/rent-receipts`,
+        metadata: { leaseId: lease.id },
+        landlordId,
       });
 
       console.log(`Landlord signed lease ${lease.id}`);

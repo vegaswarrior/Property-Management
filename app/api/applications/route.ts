@@ -4,6 +4,7 @@ import { prisma } from "@/db/prisma";
 import { auth } from "@/auth";
 import { rentalApplicationSchema } from "@/lib/validators";
 import { encryptField } from "@/lib/encrypt";
+import { NotificationService } from "@/lib/services/notification-service";
 
 /**
  * Applications API - works with path-based routing
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
         })
       : null;
 
-    await prisma.rentalApplication.create({
+    const application = await prisma.rentalApplication.create({
       data: {
         fullName: data.fullName,
         email: data.email,
@@ -105,6 +106,30 @@ export async function POST(req: NextRequest) {
         applicantId,
       },
     });
+
+    // Notify landlord about new application
+    if (property && property.landlordId) {
+      const landlord = await prisma.landlord.findUnique({
+        where: { id: property.landlordId },
+        include: {
+          owner: {
+            select: { id: true },
+          },
+        },
+      });
+
+      if (landlord?.owner?.id) {
+        await NotificationService.createNotification({
+          userId: landlord.owner.id,
+          type: 'application',
+          title: 'New Rental Application',
+          message: `New application received from ${data.fullName} for ${property.name}${unit ? ` - ${unit.name}` : ''}`,
+          actionUrl: `/admin/applications/${application.id}`,
+          metadata: { applicationId: application.id, propertyId: property.id },
+          landlordId: landlord.id,
+        });
+      }
+    }
 
     revalidatePath("/admin/applications");
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -16,6 +17,7 @@ import BankAccountForm from './bank-account-form';
 
 type SavedPayoutMethod = {
   id: string;
+  stripePaymentMethodId?: string;
   type: string;
   last4: string;
   bankName?: string;
@@ -34,6 +36,7 @@ export default function SavedPayoutMethods() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingMethod, setEditingMethod] = useState<SavedPayoutMethod | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     fetchPayoutMethods();
@@ -65,6 +68,16 @@ export default function SavedPayoutMethods() {
     }
 
     if (!res.success) {
+      if ((res as any)?.needsOnboarding) {
+        toast({
+          variant: 'destructive',
+          description: res.message || 'Payout setup is required before adding a bank account.',
+        });
+        router.push('/admin/onboarding/payouts');
+        setIsSubmitting(false);
+        return;
+      }
+
       toast({
         variant: 'destructive',
         description: res.message,

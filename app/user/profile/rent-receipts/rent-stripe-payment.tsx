@@ -4,16 +4,20 @@ import { FormEvent, useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
-  LinkAuthenticationElement,
   PaymentElement,
   useElements,
   useStripe,
 } from '@stripe/react-stripe-js';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
 import { PLATFORM_FEES } from '@/lib/config/platform-fees';
 import { CreditCard, Building2, Smartphone, Zap, Clock } from 'lucide-react';
+import PaymentMethodSelector, { PaymentMethodType } from './payment-method-selector';
+import BankAccountForm from './bank-account-form';
+import CardPaymentForm from './card-payment-form';
+import { getSavedPaymentMethods } from '@/lib/actions/user.actions';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string
@@ -22,11 +26,13 @@ const stripePromise = loadStripe(
 export default function RentStripePayment({
   totalInCents,
   clientSecret,
+  paymentIntentId,
   rentAmount,
   initialConvenienceFee,
 }: {
   totalInCents: number;
   clientSecret: string;
+  paymentIntentId?: string | null;
   rentAmount: number;
   initialConvenienceFee: number;
 }) {
@@ -38,33 +44,246 @@ export default function RentStripePayment({
 
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-    const [email, setEmail] = useState('');
-    const [selectedPaymentType, setSelectedPaymentType] = useState<'card' | 'ach' | null>(null);
+    const [selectedPaymentType, setSelectedPaymentType] = useState<PaymentMethodType>('card');
     const [convenienceFee, setConvenienceFee] = useState(initialConvenienceFee);
+    const [achVerificationPaymentIntentId, setAchVerificationPaymentIntentId] = useState<string | null>(null);
+    const [achMicrodepositAmount1, setAchMicrodepositAmount1] = useState('');
+    const [achMicrodepositAmount2, setAchMicrodepositAmount2] = useState('');
+    const [isVerifyingAch, setIsVerifyingAch] = useState(false);
+    const [savedAchMethods, setSavedAchMethods] = useState<
+      Array<{ id: string; last4: string; brand?: string | null; isVerified: boolean; isDefault: boolean }>
+    >([]);
+    const [selectedSavedAchId, setSelectedSavedAchId] = useState<string | null>(null);
+    const [isPayingWithSavedAch, setIsPayingWithSavedAch] = useState(false);
+    
+    // No contact info collected here — tenant is authenticated
 
-    // Listen for payment method changes
+    // Update fee when payment type changes
     useEffect(() => {
-      if (!elements) return;
+      if (selectedPaymentType === 'ach') {
+        setConvenienceFee(PLATFORM_FEES.CONVENIENCE_FEE_ACH);
+      } else {
+        setConvenienceFee(PLATFORM_FEES.CONVENIENCE_FEE_INSTANT);
+      }
+    }, [selectedPaymentType]);
 
-      const paymentElement = elements.getElement('payment');
-      if (!paymentElement) return;
+    useEffect(() => {
+      if (selectedPaymentType !== 'ach') return;
 
-      paymentElement.on('change', (event) => {
-        // Update convenience fee based on payment method type
-        if (event.value.type === 'us_bank_account' || event.value.type === 'ach_debit') {
-          setSelectedPaymentType('ach');
-          setConvenienceFee(PLATFORM_FEES.CONVENIENCE_FEE_ACH);
-        } else {
-          setSelectedPaymentType('card');
-          setConvenienceFee(PLATFORM_FEES.CONVENIENCE_FEE_INSTANT);
+      (async () => {
+        const result = await getSavedPaymentMethods();
+        if (!result.success) return;
+
+        const methods = (result.methods as Array<any>)
+          .filter((m) => m.type === 'us_bank_account' && m.isVerified)
+          .map((m) => ({
+            id: m.id as string,
+            last4: m.last4 as string,
+            brand: (m.brand as string | null | undefined) ?? null,
+            isVerified: !!m.isVerified,
+            isDefault: !!m.isDefault,
+          }));
+
+        setSavedAchMethods(methods);
+
+        const defaultId = methods.find((m) => m.isDefault)?.id;
+        setSelectedSavedAchId(defaultId || methods[0]?.id || null);
+      })();
+    }, [selectedPaymentType]);
+
+    const handlePaymentMethodChange = (method: PaymentMethodType) => {
+      setSelectedPaymentType(method);
+      setErrorMessage('');
+      if (method !== 'ach') {
+        setAchVerificationPaymentIntentId(null);
+        setAchMicrodepositAmount1('');
+        setAchMicrodepositAmount2('');
+        setSavedAchMethods([]);
+        setSelectedSavedAchId(null);
+      }
+    };
+
+    const handlePayWithSavedAch = async () => {
+      if (!paymentIntentId || !selectedSavedAchId) return;
+
+      setIsPayingWithSavedAch(true);
+      setErrorMessage('');
+
+      try {
+        const res = await fetch('/api/rent/confirm-saved-ach-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            paymentIntentId,
+            savedPaymentMethodId: selectedSavedAchId,
+          }),
+        });
+
+        const result = (await res.json().catch(() => ({}))) as {
+          success?: boolean;
+          message?: string;
+          requiresAction?: boolean;
+          status?: string;
+        };
+
+        if (!res.ok) {
+          setErrorMessage(result.message || 'Failed to process bank payment.');
+          return;
         }
-      });
-    }, [elements]);
 
-    const handleSubmit = async (e: FormEvent) => {
-      e.preventDefault();
+        if (result.requiresAction) {
+          setErrorMessage(
+            result.message ||
+              'Additional action is required to complete this bank payment.'
+          );
+          return;
+        }
 
-      if (!stripe || !elements || !email) return;
+        if (result.success === false) {
+          setErrorMessage(result.message || 'Failed to process bank payment.');
+          return;
+        }
+
+        window.location.href = '/user/profile/rent-receipts';
+      } catch (err) {
+        setErrorMessage('Something went wrong while processing your bank payment.');
+      } finally {
+        setIsPayingWithSavedAch(false);
+      }
+    };
+
+    const handleVerifyAch = async () => {
+      if (!achVerificationPaymentIntentId) return;
+
+      const a1 = Number(achMicrodepositAmount1);
+      const a2 = Number(achMicrodepositAmount2);
+
+      if (!Number.isFinite(a1) || !Number.isFinite(a2) || a1 <= 0 || a2 <= 0) {
+        setErrorMessage('Enter the two microdeposit amounts (in cents), like 32 and 45.');
+        return;
+      }
+
+      setIsVerifyingAch(true);
+      setErrorMessage('');
+
+      try {
+        const res = await fetch('/api/rent/verify-ach-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            paymentIntentId: achVerificationPaymentIntentId,
+            amounts: [a1, a2],
+          }),
+        });
+
+        const result = (await res.json().catch(() => ({}))) as {
+          success?: boolean;
+          message?: string;
+          requiresAction?: boolean;
+          status?: string;
+          paymentIntentId?: string;
+        };
+
+        if (!res.ok) {
+          setErrorMessage(result.message || 'Failed to verify bank account.');
+          return;
+        }
+
+        if (result.requiresAction) {
+          setErrorMessage(
+            result.message ||
+              'Verification is still required. Please double-check the code and try again.'
+          );
+          return;
+        }
+
+        if (result.success === false) {
+          setErrorMessage(result.message || 'Failed to verify bank account.');
+          return;
+        }
+
+        window.location.href = '/user/profile/rent-receipts';
+      } catch (err) {
+        setErrorMessage('Something went wrong while verifying your bank account.');
+      } finally {
+        setIsVerifyingAch(false);
+      }
+    };
+
+    const handleBankAccountSubmit = async (data: {
+      accountHolderName: string;
+      accountHolderType?: 'individual' | 'company';
+      routingNumber: string;
+      accountNumber: string;
+      accountNumberConfirm: string;
+      accountType: 'checking' | 'savings';
+      consent: boolean;
+    }) => {
+      setIsLoading(true);
+      setErrorMessage('');
+
+      try {
+        // Call your API to create ACH payment intent and confirm
+        const res = await fetch('/api/rent/confirm-ach-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            paymentIntentId: paymentIntentId,
+            accountHolderName: data.accountHolderName,
+            accountHolderType: data.accountHolderType,
+            routingNumber: data.routingNumber,
+            accountNumber: data.accountNumber,
+            accountType: data.accountType,
+            consent: data.consent,
+          }),
+        });
+
+        const result = (await res.json().catch(() => ({}))) as {
+          success?: boolean;
+          message?: string;
+          requiresAction?: boolean;
+          status?: string;
+          nextAction?: unknown;
+          paymentIntentId?: string;
+        };
+
+        if (!res.ok) {
+          setErrorMessage(result.message || 'Failed to process ACH payment');
+          return;
+        }
+
+        if (result.requiresAction) {
+          const idFromResponse = result.paymentIntentId;
+          const fallbackId = paymentIntentId || null;
+          setAchVerificationPaymentIntentId(idFromResponse || fallbackId);
+          setErrorMessage(
+            result.message ||
+              'This bank payment needs additional verification before it can complete.'
+          );
+          return;
+        }
+
+        if (result.success === false) {
+          setErrorMessage(result.message || 'Failed to process ACH payment');
+          return;
+        }
+
+        window.location.href = '/user/profile/rent-receipts';
+      } catch (err) {
+        setErrorMessage('Something went wrong while processing your payment.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const handleCardPaymentSubmit = async () => {
+      if (!stripe || !elements) return;
 
       setIsLoading(true);
       setErrorMessage('');
@@ -108,44 +327,106 @@ export default function RentStripePayment({
     const displayTotal = rentAmount + convenienceFee;
 
     return (
-      <form className='space-y-5' onSubmit={handleSubmit}>
-        {/* Payment Method Info Cards */}
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
-          <div className='rounded-lg border-2 border-emerald-200 bg-emerald-50 p-4'>
-            <div className='flex items-start gap-3'>
-              <div className='rounded-full bg-emerald-600 p-2'>
-                <Building2 className='h-4 w-4 text-white' />
-              </div>
-              <div className='flex-1'>
-                <div className='flex items-center gap-2'>
-                  <h4 className='text-sm font-semibold text-emerald-900'>Bank Account (ACH)</h4>
-                  <span className='text-xs bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full font-medium'>FREE</span>
-                </div>
-                <p className='text-xs text-emerald-700 mt-1'>No convenience fee • 5-7 days</p>
-                <p className='text-xs text-emerald-600 mt-1'>✓ Can set up recurring payments</p>
-              </div>
-            </div>
-          </div>
+      <form className='space-y-6' onSubmit={(e) => e.preventDefault()}>
+        {/* Payment Method Selection */}
+        <PaymentMethodSelector
+          selectedMethod={selectedPaymentType}
+          onMethodChange={handlePaymentMethodChange}
+        />
 
-          <div className='rounded-lg border-2 border-violet-200 bg-violet-50 p-4'>
-            <div className='flex items-start gap-3'>
-              <div className='rounded-full bg-violet-600 p-2'>
-                <Zap className='h-4 w-4 text-white' />
-              </div>
-              <div className='flex-1'>
-                <div className='flex items-center gap-2'>
-                  <h4 className='text-sm font-semibold text-violet-900'>Card / Wallet</h4>
-                  <span className='text-xs bg-violet-200 text-violet-800 px-2 py-0.5 rounded-full font-medium'>+$2</span>
+        {/* Payment Method Forms */}
+        {selectedPaymentType === 'ach' ? (
+          <div className='rounded-lg border border-slate-300 bg-white p-6'>
+            {achVerificationPaymentIntentId ? (
+              <div className='space-y-4'>
+                <div className='text-sm text-slate-700'>
+                  Your bank requires verification to complete this ACH payment. Enter the two microdeposit amounts (in cents). In test mode you can use <span className='font-semibold'>32</span> and <span className='font-semibold'>45</span>.
                 </div>
-                <p className='text-xs text-violet-700 mt-1'>Convenience fee • Instant</p>
-                <div className='flex items-center gap-1 mt-1'>
-                  <Smartphone className='h-3 w-3 text-violet-600' />
-                  <p className='text-xs text-violet-600'>Apple Pay, Google Pay, Cards</p>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                  <Input
+                    value={achMicrodepositAmount1}
+                    onChange={(e) => setAchMicrodepositAmount1(e.target.value)}
+                    placeholder='First deposit (cents) e.g. 32'
+                    inputMode='numeric'
+                    className='text-slate-900 placeholder:text-slate-400'
+                  />
+                  <Input
+                    value={achMicrodepositAmount2}
+                    onChange={(e) => setAchMicrodepositAmount2(e.target.value)}
+                    placeholder='Second deposit (cents) e.g. 45'
+                    inputMode='numeric'
+                    className='text-slate-900 placeholder:text-slate-400'
+                  />
+                </div>
+                <Button
+                  type='button'
+                  onClick={handleVerifyAch}
+                  disabled={
+                    isVerifyingAch ||
+                    isLoading ||
+                    achMicrodepositAmount1.trim().length === 0 ||
+                    achMicrodepositAmount2.trim().length === 0
+                  }
+                  className='w-full bg-emerald-600 hover:bg-emerald-700 text-white'
+                >
+                  {isVerifyingAch ? 'Verifying...' : 'Verify Bank Account'}
+                </Button>
+              </div>
+            ) : savedAchMethods.length > 0 && selectedSavedAchId ? (
+              <div className='space-y-4'>
+                <div className='text-sm text-slate-700'>
+                  Use a saved bank account or enter a new one.
+                </div>
+                <div className='space-y-2'>
+                  <select
+                    value={selectedSavedAchId}
+                    onChange={(e) => setSelectedSavedAchId(e.target.value)}
+                    className='flex h-9 w-full rounded-md border border-slate-200 bg-transparent px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500'
+                  >
+                    {savedAchMethods.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {(m.brand || 'Bank Account')} •••• {m.last4}
+                        {m.isDefault ? ' (Default)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type='button'
+                    onClick={handlePayWithSavedAch}
+                    disabled={isPayingWithSavedAch || isLoading}
+                    className='w-full bg-emerald-600 hover:bg-emerald-700 text-white'
+                  >
+                    {isPayingWithSavedAch ? 'Processing...' : 'Pay with Saved Bank Account'}
+                  </Button>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={() => {
+                      setSavedAchMethods([]);
+                      setSelectedSavedAchId(null);
+                    }}
+                    disabled={isPayingWithSavedAch || isLoading}
+                    className='w-full border-slate-300 text-slate-900 hover:bg-slate-50'
+                  >
+                    Use a different bank account
+                  </Button>
                 </div>
               </div>
-            </div>
+            ) : (
+              <BankAccountForm
+                onSubmit={handleBankAccountSubmit}
+                isLoading={isLoading}
+              />
+            )}
           </div>
-        </div>
+        ) : (
+          <div className='rounded-lg border border-slate-300 bg-white p-6'>
+            <CardPaymentForm
+              onSubmit={handleCardPaymentSubmit}
+              isLoading={isLoading}
+            />
+          </div>
+        )}
 
         {/* Payment Breakdown */}
         <div className='rounded-lg border border-slate-300 bg-slate-50 p-4 space-y-2.5'>
@@ -176,13 +457,19 @@ export default function RentStripePayment({
         </div>
 
         {/* Info Banner */}
+        {errorMessage && (
+          <div className='rounded-lg border border-red-200 bg-red-50 p-3.5 text-sm'>
+            <p className='text-red-900 font-medium'>{errorMessage}</p>
+          </div>
+        )}
+
         <div className='rounded-lg border border-blue-200 bg-blue-50 p-3.5 text-sm'>
           <div className='flex items-start gap-2'>
             <div className='rounded-full bg-blue-600 p-1 mt-0.5'>
               <Clock className='h-3 w-3 text-white' />
             </div>
             <div className='flex-1'>
-              <p className='font-semibold text-blue-900 mb-1'>💡 Choose your payment method below</p>
+              <p className='font-semibold text-blue-900 mb-1'>💡 Payment method info</p>
               <ul className='space-y-1 text-xs text-blue-800'>
                 <li className='flex items-start gap-1.5'>
                   <span className='text-emerald-600 font-bold mt-0.5'>•</span>
@@ -196,38 +483,6 @@ export default function RentStripePayment({
             </div>
           </div>
         </div>
-
-        {errorMessage && <div className='text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3'>{errorMessage}</div>}
-        
-        {/* Stripe Payment Element with all payment methods */}
-        <div className='rounded-lg border border-slate-300 p-4 bg-white'>
-          <PaymentElement 
-            options={{
-              layout: {
-                type: 'tabs',
-                defaultCollapsed: false,
-              },
-              wallets: {
-                applePay: 'auto',
-                googlePay: 'auto',
-              },
-            }}
-          />
-        </div>
-        
-        <div>
-          <LinkAuthenticationElement onChange={(e) => setEmail(e.value.email)} />
-        </div>
-        
-        <Button
-          className='w-full rounded-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold'
-          size='lg'
-          disabled={stripe == null || elements == null || isLoading}
-        >
-          {isLoading
-            ? 'Processing payment...'
-            : `Pay ${formatCurrency(displayTotal)}`}
-        </Button>
 
         <p className='text-xs text-center text-slate-500'>
           🔒 Secure payment processed by Stripe. Your information is encrypted and protected.

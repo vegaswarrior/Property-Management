@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/db/prisma';
+import { NotificationService } from '@/lib/services/notification-service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await prisma.maintenanceTicket.create({
+    const ticket = await prisma.maintenanceTicket.create({
       data: {
         tenantId: userId,
         unitId: unitId || null,
@@ -61,7 +62,46 @@ export async function POST(req: NextRequest) {
         description: description.trim(),
         priority: finalPriority,
       },
+      include: {
+        unit: {
+          include: {
+            property: {
+              include: {
+                landlord: {
+                  include: {
+                    owner: {
+                      select: { id: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        tenant: {
+          select: { name: true },
+        },
+      },
     });
+
+    // Notify landlord about new maintenance ticket
+    if (ticket.unit?.property?.landlord?.owner?.id) {
+      const landlordId = ticket.unit.property.landlordId;
+      const propertyName = ticket.unit.property.name;
+      const unitName = ticket.unit.name;
+      const tenantName = ticket.tenant?.name || 'Tenant';
+      const priorityLabel = finalPriority.charAt(0).toUpperCase() + finalPriority.slice(1);
+
+      await NotificationService.createNotification({
+        userId: ticket.unit.property.landlord.owner.id,
+        type: 'maintenance',
+        title: `New ${priorityLabel} Priority Maintenance Ticket`,
+        message: `${tenantName} submitted a maintenance request: "${title.trim()}" for ${propertyName} - ${unitName}`,
+        actionUrl: `/admin/maintenance`,
+        metadata: { ticketId: ticket.id, priority: finalPriority },
+        landlordId: landlordId ?? undefined,
+      });
+    }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {

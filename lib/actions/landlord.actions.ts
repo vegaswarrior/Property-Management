@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
+import Stripe from 'stripe';
 
 const brandingSchema = z.object({
   companyName: z.string().trim().min(1).max(120).optional(),
@@ -460,6 +461,26 @@ export async function addSavedPayoutMethod(
     const landlord = landlordResult.landlord;
     const validatedData = savedPayoutMethodSchema.parse(data);
 
+    if (!landlord.stripeConnectAccountId) {
+      return {
+        success: false,
+        needsOnboarding: true,
+        message: 'Stripe account not connected. Complete onboarding first.',
+      };
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2025-02-24.acacia',
+    });
+
+    const externalAccount = await stripe.accounts.createExternalAccount(
+      landlord.stripeConnectAccountId,
+      {
+        external_account: validatedData.stripePaymentMethodId,
+        default_for_currency: validatedData.isDefault,
+      }
+    );
+
     if (validatedData.isDefault) {
       await prisma.savedPayoutMethod.updateMany({
         where: { landlordId: landlord.id },
@@ -470,7 +491,7 @@ export async function addSavedPayoutMethod(
     const payoutMethod = await prisma.savedPayoutMethod.create({
       data: {
         landlordId: landlord.id,
-        stripePaymentMethodId: validatedData.stripePaymentMethodId,
+        stripePaymentMethodId: externalAccount.id,
         type: validatedData.type,
         accountHolderName: validatedData.accountHolderName,
         last4: validatedData.last4,
@@ -524,6 +545,7 @@ export async function getSavedPayoutMethods() {
       success: true,
       methods: methods.map(method => ({
         id: method.id,
+        stripePaymentMethodId: method.stripePaymentMethodId,
         type: method.type,
         last4: method.last4,
         bankName: method.bankName,

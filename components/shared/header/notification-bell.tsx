@@ -36,14 +36,19 @@ export default function NotificationBell({ isAdmin }: { isAdmin: boolean }) {
 
   // Fetch notifications
   const fetchNotifications = async () => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id) {
+      setLoading(false);
+      return;
+    }
     
     try {
-      const response = await fetch(`/api/notifications?userId=${session.user.id}&limit=10`);
+      const response = await fetch(`/api/notifications?userId=${session.user.id}&limit=10&includeRead=true`);
       if (response.ok) {
         const data = await response.json();
         setNotifications(data.notifications || []);
         setUnreadCount(data.unreadCount || 0);
+      } else {
+        console.error('Failed to fetch notifications:', response.status, await response.text());
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -62,10 +67,15 @@ export default function NotificationBell({ isAdmin }: { isAdmin: boolean }) {
       });
 
       if (response.ok) {
+        // Update local state immediately
         setNotifications(prev =>
           prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
         );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        // Recalculate unread count from updated notifications
+        setUnreadCount(prev => {
+          const notification = notifications.find(n => n.id === notificationId);
+          return notification && !notification.isRead ? Math.max(0, prev - 1) : prev;
+        });
       }
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
@@ -113,13 +123,19 @@ export default function NotificationBell({ isAdmin }: { isAdmin: boolean }) {
   };
 
   // Handle notification click
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read first, then navigate
     if (!notification.isRead) {
-      markAsRead(notification.id);
+      await markAsRead(notification.id);
     }
     
+    setIsOpen(false);
+    
     if (notification.actionUrl) {
-      window.location.href = notification.actionUrl;
+      // Small delay to allow state update before navigation
+      setTimeout(() => {
+        window.location.href = notification.actionUrl!;
+      }, 100);
     }
   };
 
@@ -128,10 +144,14 @@ export default function NotificationBell({ isAdmin }: { isAdmin: boolean }) {
       fetchNotifications();
       
       // Set up polling for new notifications
-      const interval = setInterval(fetchNotifications, 30000); // 30 seconds
+      const interval = setInterval(() => {
+        fetchNotifications();
+      }, 30000); // 30 seconds
       return () => clearInterval(interval);
+    } else {
+      setLoading(false);
     }
-  }, [session]);
+  }, [session?.user?.id]);
 
   if (!session?.user?.id) {
     return null;

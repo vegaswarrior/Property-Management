@@ -41,6 +41,7 @@ type BankAccountFormProps = {
   onCancel?: () => void;
   initialData?: {
     id: string;
+    stripePaymentMethodId?: string;
     accountHolderName?: string;
     isDefault: boolean;
     last4: string;
@@ -77,7 +78,7 @@ export default function BankAccountForm({
       setIsProcessing(true);
       try {
         await onSubmit({
-          stripePaymentMethodId: initialData?.id || '',
+          stripePaymentMethodId: initialData?.stripePaymentMethodId || '',
           type: 'bank_account',
           accountHolderName: values.accountHolderName,
           last4: initialData?.last4 || '',

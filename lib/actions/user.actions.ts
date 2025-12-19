@@ -36,12 +36,6 @@ export async function signInWithCredentials(
       password: formData.get('password'),
     });
 
-    const rawCallbackUrl = formData.get('callbackUrl');
-    const callbackUrl =
-      typeof rawCallbackUrl === 'string' && rawCallbackUrl.trim().startsWith('/')
-        ? rawCallbackUrl.trim()
-        : '/';
-
     // Sign in the user
     const result = await signIn('credentials', {
       ...user,
@@ -62,11 +56,22 @@ export async function signInWithCredentials(
       return { success: false, message: 'User not found' };
     }
 
-    // Determine the correct redirect URL based on subdomain and user role
-    const redirectUrl = await getSubdomainRedirectUrl(
-      authenticatedUser.role,
-      authenticatedUser.id
-    );
+    // Check if there's a specific callback URL provided (and it's not just '/')
+    const rawCallbackUrl = formData.get('callbackUrl');
+    const callbackUrl =
+      typeof rawCallbackUrl === 'string' && 
+      rawCallbackUrl.trim().startsWith('/') && 
+      rawCallbackUrl.trim() !== '/'
+        ? rawCallbackUrl.trim()
+        : null;
+
+    // If there's a specific callback URL, use it; otherwise use role-based redirect
+    const redirectUrl = callbackUrl 
+      ? callbackUrl 
+      : await getSubdomainRedirectUrl(
+          authenticatedUser.role,
+          authenticatedUser.id
+        );
 
     redirect(redirectUrl);
   } catch (error) {
@@ -133,33 +138,10 @@ export async function signUpUser(prevState: unknown, formData: FormData) {
     // Check if user came from a property application flow
     const propertySlug = formData.get('propertySlug');
     
-    // If tenant signed up from a property, create a draft application for them
+    // If tenant signed up from a property, redirect them back to the application page
     if (roleValue === 'tenant' && propertySlug && typeof propertySlug === 'string' && propertySlug.trim().length > 0) {
-      // Find an available unit for this property to link to the application
-      const availableUnit = await prisma.unit.findFirst({
-        where: {
-          isAvailable: true,
-          property: {
-            slug: propertySlug.trim(),
-          },
-        },
-        orderBy: { createdAt: 'asc' },
-      });
-
-      // Create a draft application so it's waiting for them in their dashboard
-      const draft = await prisma.rentalApplication.create({
-        data: {
-          fullName: user.name,
-          email: user.email,
-          propertySlug: propertySlug.trim(),
-          unitId: availableUnit?.id ?? null,
-          status: 'draft',
-          applicantId: createdUser.id,
-        },
-      });
-      
-      // Redirect into tenant onboarding first (verification + application)
-      redirect(`/user/onboarding?applicationId=${encodeURIComponent(draft.id)}`);
+      // Redirect back to the application page with the property slug
+      redirect(`/application?property=${encodeURIComponent(propertySlug.trim())}`);
     }
 
     const rawCallbackUrl = formData.get('callbackUrl');

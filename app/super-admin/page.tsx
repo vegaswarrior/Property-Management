@@ -3,7 +3,7 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getOrderSummary } from '@/lib/actions/order-actions';
 import { getAnalyticsOverview } from '@/lib/actions/analytics.actions';
-import { getSuperAdminInsights, listUsersForSuperAdmin } from '@/lib/actions/super-admin.actions';
+import { getSuperAdminInsights, listUsersForSuperAdmin, listLandlordsForSuperAdmin } from '@/lib/actions/super-admin.actions';
 import { convertToPlainObject } from '@/lib/utils';
 import SuperAdminDashboard from './super-admin-dashboard';
 
@@ -21,17 +21,19 @@ export default async function SuperAdminPage() {
     return redirect('/sign-in');
   }
 
-  const [summary, analytics, insights, users] = await Promise.all([
+  const [summary, analytics, insights, users, landlords] = await Promise.all([
     getOrderSummary(),
     getAnalyticsOverview(),
     getSuperAdminInsights(),
     listUsersForSuperAdmin(),
+    listLandlordsForSuperAdmin(),
   ]);
 
   const serializedSummary = convertToPlainObject(summary);
   const serializedAnalytics = convertToPlainObject(analytics);
   const serializedInsights = convertToPlainObject(insights);
   const serializedUsers = convertToPlainObject(users);
+  const serializedLandlords = convertToPlainObject(landlords);
 
   return (
     <SuperAdminDashboard
@@ -40,6 +42,7 @@ export default async function SuperAdminPage() {
       analytics={serializedAnalytics}
       insights={serializedInsights as any}
       users={serializedUsers as any}
+      landlords={serializedLandlords as any}
       currentUser={session.user}
     />
   );
