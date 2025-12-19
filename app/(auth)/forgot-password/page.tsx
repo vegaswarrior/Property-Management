@@ -77,6 +77,7 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isPending}
+              className='bg-white text-gray-900 border-gray-300'
             />
           </div>
           <Button type='submit' className='w-full' disabled={isPending}>

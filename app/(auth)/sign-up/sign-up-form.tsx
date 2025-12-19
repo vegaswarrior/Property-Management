@@ -95,6 +95,7 @@ const SignUpForm = ({ propertySlug }: SignUpFormProps) => {
             type='text'
             autoComplete='name'
             defaultValue={signUpDefaultValues.name}
+            className='bg-white text-gray-900 border-gray-300'
           />
         </div>
         <div>
@@ -105,6 +106,7 @@ const SignUpForm = ({ propertySlug }: SignUpFormProps) => {
             type='text'
             autoComplete='email'
             defaultValue={signUpDefaultValues.email}
+            className='bg-white text-gray-900 border-gray-300'
           />
         </div>
         <div>
@@ -116,6 +118,7 @@ const SignUpForm = ({ propertySlug }: SignUpFormProps) => {
             required
             autoComplete='password'
             defaultValue={signUpDefaultValues.password}
+            className='bg-white text-gray-900 border-gray-300'
           />
         </div>
         <div>
@@ -127,6 +130,7 @@ const SignUpForm = ({ propertySlug }: SignUpFormProps) => {
             required
             autoComplete='confirmPassword'
             defaultValue={signUpDefaultValues.confirmPassword}
+            className='bg-white text-gray-900 border-gray-300'
           />
         </div>
         <div>

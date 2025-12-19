@@ -40,6 +40,7 @@ const CredentialsSignInForm = () => {
             type='email'
             required
             autoComplete='email'
+            className='bg-white text-gray-900 border-gray-300'
           />
         </div>
         <div>
@@ -50,6 +51,7 @@ const CredentialsSignInForm = () => {
             type='password'
             required
             autoComplete='password'
+            className='bg-white text-gray-900 border-gray-300'
           />
         </div>
         <div>

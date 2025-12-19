@@ -38,6 +38,7 @@ const SuperAdminCredentialsSignInForm = () => {
             required
             autoComplete='off'
             defaultValue={DEFAULT_SUPERADMIN_EMAIL}
+            className='bg-white text-gray-900 border-gray-300'
           />
         </div>
         <div>
@@ -49,6 +50,7 @@ const SuperAdminCredentialsSignInForm = () => {
             required
             minLength={15}
             autoComplete='new-password'
+            className='bg-white text-gray-900 border-gray-300'
           />
         </div>
         <div>

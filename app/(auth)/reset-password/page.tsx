@@ -113,6 +113,7 @@ export default function ResetPasswordPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={isPending}
+              className='bg-white text-gray-900 border-gray-300'
             />
           </div>
           <div>
@@ -126,6 +127,7 @@ export default function ResetPasswordPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               disabled={isPending}
+              className='bg-white text-gray-900 border-gray-300'
             />
           </div>
           {error && <p className='text-red-500 text-sm'>{error}</p>}
