@@ -1,4 +1,5 @@
 import { auth } from '@/auth'
+import { prisma } from '@/db/prisma'
 import { redirect } from 'next/navigation'
 
 export async function requireAdmin() {
@@ -12,6 +13,19 @@ export async function requireAdmin() {
     role === 'property_manager'
 
   if (!isAllowed) {
+    const userId = session?.user?.id
+    if (userId) {
+      try {
+        const membership = await (prisma as any).teamMember?.findFirst?.({
+          where: { userId, status: 'active' },
+          select: { id: true },
+        })
+        if (membership?.id) {
+          return session
+        }
+      } catch {}
+    }
+
     redirect('/unauthorized')
   }
 

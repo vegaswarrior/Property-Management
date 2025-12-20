@@ -9,11 +9,17 @@ export async function POST(req: NextRequest) {
   const payload = await req.text();
   const signature = req.headers.get('stripe-signature') as string;
 
-  const event = await Stripe.webhooks.constructEvent(
-    payload,
-    signature,
-    process.env.STRIPE_WEBHOOK_SECRET as string
-  );
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret || !signature) {
+    return NextResponse.json({ message: 'Missing Stripe webhook configuration' }, { status: 400 });
+  }
+
+  let event: Stripe.Event;
+  try {
+    event = Stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+  } catch {
+    return NextResponse.json({ message: 'Invalid Stripe webhook signature' }, { status: 400 });
+  }
 
   if (event.type === 'charge.succeeded') {
     const charge = event.data.object as Stripe.Charge;

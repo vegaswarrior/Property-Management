@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { email, role } = body;
 
-    if (!email) {
+    if (!email || typeof email !== 'string') {
       return NextResponse.json({ success: false, message: 'Email is required' }, { status: 400 });
     }
 
@@ -22,9 +22,6 @@ export async function POST(req: NextRequest) {
     if (!result.success) {
       return NextResponse.json(result, { status: result.featureLocked ? 403 : 400 });
     }
-
-    // TODO: Send invitation email
-    // await sendTeamInviteEmail(email, result.member.inviteToken);
 
     return NextResponse.json(result);
   } catch (error) {

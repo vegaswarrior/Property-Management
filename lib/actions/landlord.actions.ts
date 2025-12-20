@@ -64,6 +64,22 @@ export async function getOrCreateCurrentLandlord() {
     const userId = session.user.id as string;
     const userName = session.user.name || 'My Properties';
 
+    try {
+      const teamMembership = await (prisma as any).teamMember?.findFirst?.({
+        where: { userId, status: 'active' },
+        select: { landlordId: true },
+      });
+
+      if (teamMembership?.landlordId) {
+        const teamLandlord = await prisma.landlord.findUnique({
+          where: { id: teamMembership.landlordId },
+        });
+        if (teamLandlord) {
+          return { success: true as const, landlord: teamLandlord };
+        }
+      }
+    } catch {}
+
     let landlord = await prisma.landlord.findFirst({
       where: { ownerUserId: userId },
     });

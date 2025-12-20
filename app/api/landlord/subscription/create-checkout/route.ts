@@ -22,6 +22,14 @@ export async function POST(req: NextRequest) {
 
     const tierConfig = SUBSCRIPTION_TIERS[targetTier];
 
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) {
+      return NextResponse.json(
+        { success: false, message: 'Stripe is not configured on the server (missing STRIPE_SECRET_KEY).' },
+        { status: 500 }
+      );
+    }
+
     if (!tierConfig.priceId) {
       if (targetTier === 'enterprise') {
         return NextResponse.json({ 
@@ -40,7 +48,26 @@ export async function POST(req: NextRequest) {
     }
 
     const landlord = landlordResult.landlord;
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+    if (session.user.role !== 'superAdmin' && landlord.ownerUserId !== session.user.id) {
+      return NextResponse.json(
+        { success: false, message: 'Only the account owner can manage billing and upgrades.' },
+        { status: 403 }
+      );
+    }
+
+    const stripe = new Stripe(stripeSecretKey);
+    try {
+      await stripe.prices.retrieve(tierConfig.priceId);
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            'This plan is not purchasable right now. Stripe could not find the configured price for this tier. Check STRIPE_PRICE_PRO / environment mode (test vs live).',
+        },
+        { status: 500 }
+      );
+    }
 
     let customerId = landlord.stripeCustomerId;
 

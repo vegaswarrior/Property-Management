@@ -6,6 +6,8 @@ import { formatError } from '../utils';
 import { getOrCreateCurrentLandlord } from './landlord.actions';
 import { checkFeatureAccess } from './subscription.actions';
 import { randomUUID } from 'crypto';
+import nodemailer from 'nodemailer';
+import { APP_NAME } from '@/lib/constants';
 
 export type TeamMemberRole = 'owner' | 'admin' | 'member';
 export type TeamPermission = 
@@ -23,6 +25,62 @@ const DEFAULT_PERMISSIONS: Record<TeamMemberRole, TeamPermission[]> = {
 
 // Type-safe prisma access for models that may not exist yet
 const teamMemberModel = () => (prisma as any).teamMember;
+
+async function sendTeamInviteEmail(params: {
+  email: string;
+  inviteToken: string;
+  landlordName: string;
+}) {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const fromAddress = process.env.SMTP_FROM_EMAIL || 'no-reply@rockenmyvibe.com';
+
+  if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
+    throw new Error('Email configuration is missing on the server.');
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.SERVER_URL || 'http://localhost:3000';
+  const acceptUrl = `${baseUrl}/team/invite?token=${encodeURIComponent(params.inviteToken)}`;
+
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  });
+
+  const subject = `${params.landlordName} invited you to join their team`;
+
+  const html = `
+    <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.5;">
+      <h2 style="margin-bottom: 0.5rem;">You have been invited to join a team</h2>
+      <p>${params.landlordName} is using ${APP_NAME} to manage properties.</p>
+      <p style="margin: 1.5rem 0;">
+        <a
+          href="${acceptUrl}"
+          style="display: inline-block; padding: 0.75rem 1.5rem; background: #7c3aed; color: #ffffff; text-decoration: none; border-radius: 999px; font-weight: 600;"
+        >
+          Accept invite
+        </a>
+      </p>
+      <p>If the button does not work, copy and paste this link into your browser:</p>
+      <p style="font-size: 12px; color: #4b5563; word-break: break-all;">${acceptUrl}</p>
+      <p style="font-size: 12px; color: #6b7280;">This invite expires in 7 days.</p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `${APP_NAME} <${fromAddress}>`,
+    to: params.email,
+    subject,
+    html,
+  });
+}
 
 export async function getTeamMembers() {
   try {
@@ -100,6 +158,18 @@ export async function inviteTeamMember(email: string, role: TeamMemberRole = 'me
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
+
+    try {
+      const activeCount =
+        (await teamMemberModel()?.count?.({
+          where: { landlordId: landlordResult.landlord.id, status: 'active' },
+        })) || 0;
+      if (activeCount >= 5) {
+        return { success: false, message: 'Team limit reached. You can have up to 5 active team members.' };
+      }
+    } catch {
+      // If model missing, invite flow already fails later.
+    }
     
     // Check if already a team member
     if (existingUser) {
@@ -128,10 +198,11 @@ export async function inviteTeamMember(email: string, role: TeamMemberRole = 'me
     // Create pending team member
     let member;
     try {
+      const placeholderUserId = existingUser?.id || randomUUID();
       member = await teamMemberModel()?.create?.({
         data: {
           landlordId: landlordResult.landlord.id,
-          userId: existingUser?.id || session.user.id, // Temporary, will be updated on accept
+          userId: placeholderUserId,
           role,
           permissions: DEFAULT_PERMISSIONS[role],
           invitedEmail: email,
@@ -144,8 +215,11 @@ export async function inviteTeamMember(email: string, role: TeamMemberRole = 'me
       return { success: false, message: 'Team management requires database migration. Please run: npx prisma migrate dev' };
     }
 
-    // TODO: Send invitation email
-    // await sendTeamInviteEmail(email, inviteToken, landlordResult.landlord.name);
+    await sendTeamInviteEmail({
+      email,
+      inviteToken,
+      landlordName: landlordResult.landlord.name,
+    });
 
     return { 
       success: true, 
@@ -185,7 +259,44 @@ export async function acceptTeamInvite(inviteToken: string) {
       return { success: false, message: 'This invitation has expired' };
     }
 
-    // Update member with actual user ID
+    if (member.invitedEmail && session.user.email && member.invitedEmail.toLowerCase() !== session.user.email.toLowerCase()) {
+      return { success: false, message: 'This invite was sent to a different email address.' };
+    }
+
+    const existingMembership = await teamMemberModel()?.findUnique?.({
+      where: {
+        landlordId_userId: {
+          landlordId: member.landlordId,
+          userId: session.user.id,
+        },
+      },
+    });
+
+    if (existingMembership?.status === 'active') {
+      return { success: true, message: 'You are already on this team' };
+    }
+
+    const activeCount =
+      (await teamMemberModel()?.count?.({
+        where: { landlordId: member.landlordId, status: 'active' },
+      })) || 0;
+    if (activeCount >= 5) {
+      return { success: false, message: 'This team is already at the 5-member limit.' };
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+
+    const allowedRoles = ['admin', 'superAdmin', 'landlord', 'property_manager'];
+    if (currentUser?.role && !allowedRoles.includes(currentUser.role)) {
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { role: 'property_manager' },
+      });
+    }
+
     await teamMemberModel()?.update?.({
       where: { id: member.id },
       data: {
