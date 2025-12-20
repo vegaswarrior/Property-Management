@@ -51,37 +51,26 @@ export default async function TeamPage() {
   }
 
   return (
-    <main className="w-full px-4 py-10 md:px-0">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <h1 className="text-3xl md:text-4xl font-semibold text-white">Team</h1>
-            <p className="text-sm text-slate-300/80">
-              Invite team members to help manage your properties.
-            </p>
-          </div>
-        </div>
-
-        <TeamDashboard 
-          members={teamData.success && teamData.members ? teamData.members : []} 
-        />
-
-        {subscriptionData.features?.teamCommunications && (
-          <div className="rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-xl p-4">
-            <div className="mb-4">
+    <main className="w-full h-[calc(100vh-140px)]">
+      <div className="-m-4 md:-m-6 h-full">
+        {subscriptionData.features?.teamCommunications ? (
+          <TeamChat
+            currentUser={{
+              id: session?.user?.id || '',
+              name: session?.user?.name || 'User',
+              email: session?.user?.email || '',
+              image: session?.user?.image || undefined,
+            }}
+            landlordId={landlordResult.success ? landlordResult.landlord.id : ''}
+            isFullPage={true}
+            teamMembers={teamData.success && teamData.members ? teamData.members : []}
+          />
+        ) : (
+          <div className="h-full rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-xl p-6 flex items-center justify-center">
+            <div className="text-center">
               <h2 className="text-xl font-semibold text-white">Team Chat</h2>
-              <p className="text-sm text-slate-400">Communicate with your team in real-time</p>
+              <p className="mt-2 text-sm text-slate-400">Team chat is available on the Pro plan.</p>
             </div>
-            <TeamChat
-              currentUser={{
-                id: session?.user?.id || '',
-                name: session?.user?.name || 'User',
-                email: session?.user?.email || '',
-                image: session?.user?.image || undefined,
-              }}
-              landlordId={landlordResult.success ? landlordResult.landlord.id : ''}
-              isFullPage={false}
-            />
           </div>
         )}
       </div>

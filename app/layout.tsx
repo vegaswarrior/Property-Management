@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 import '@/assets/styles/globals.css';
 import { APP_DESCRIPTION, APP_NAME, SERVER_URL } from '@/lib/constants';
 import { Toaster } from '@/components/ui/toaster';
-// import { ChatWidget } from '@/components/shared/chat-widget';
 import PageViewTracker from '@/components/analytics/page-view-tracker';
 import SessionProviderWrapper from '@/components/session-provider-wrapper';
 import { ThemeProvider } from 'next-themes';
+import { TeamChatWidgetWrapper } from '@/components/team/team-chat-widget-wrapper';
 
 let resolvedMetadataBase: URL;
 try {
@@ -55,7 +55,7 @@ export default function RootLayout({
             </div>
             {children}
             <Toaster />
-            {/* <ChatWidget /> */}
+            <TeamChatWidgetWrapper />
           </ThemeProvider>
         </SessionProviderWrapper>
       </body>

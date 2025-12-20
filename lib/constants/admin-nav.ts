@@ -22,7 +22,7 @@ export const adminNavLinks: AdminNavLink[] = [
   },
   {
     title: 'Documents',
-    description: 'Digitize paper records',
+    description: 'Manage leases, applications, and more',
     href: '/admin/documents',
     icon: ScanText,
   },
@@ -63,16 +63,9 @@ export const adminNavLinks: AdminNavLink[] = [
     icon: Palette,
   },
   {
-    title: 'Legal Documents',
-    description: 'Leases & legal templates',
-    href: '/admin/legal-documents',
-    icon: Scale,
-  },
-  {
     title: 'Team',
     description: 'Invite & manage team members',
     href: '/admin/team',
     icon: Users,
   },
 ];
-

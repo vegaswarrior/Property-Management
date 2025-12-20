@@ -45,7 +45,8 @@ const AdminBrandingPage = async (props: {
   };
   
   // Base URL for production (path-based routing, not subdomain)
-  const rawBaseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://www.rooms4rentlv.com';
+  const rawBaseUrl =
+    process.env.NEXT_PUBLIC_SERVER_URL || process.env.NEXT_PUBLIC_VERCEL_URL || 'https://www.rooms4rentlv.com';
   let baseUrl = 'https://www.rooms4rentlv.com';
   try {
     const normalizedRaw = rawBaseUrl.startsWith('http') ? rawBaseUrl : `https://${rawBaseUrl}`;

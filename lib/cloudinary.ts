@@ -53,16 +53,22 @@ export async function uploadToCloudinary(
   options: UploadApiOptions
 ): Promise<UploadApiResponse> {
   requireCloudinaryConfig();
+
   return new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream(options, (error: UploadApiErrorResponse | undefined, result?: UploadApiResponse) => {
+    const base64String = fileBuffer.toString('base64');
+    const dataUri = `data:application/octet-stream;base64,${base64String}`;
+
+    cloudinary.uploader.upload(
+      dataUri,
+      options,
+      (error: UploadApiErrorResponse | undefined, result?: UploadApiResponse) => {
         if (error || !result) {
           reject(error || new Error('Unknown Cloudinary upload error'));
           return;
         }
         resolve(result);
-      })
-      .end(fileBuffer);
+      }
+    );
   });
 }
 

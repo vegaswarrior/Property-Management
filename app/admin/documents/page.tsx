@@ -1,55 +1,27 @@
 import { requireAdmin } from '@/lib/auth-guard';
-import { getDocuments } from '@/lib/actions/document.actions';
-import { getOrCreateCurrentLandlord } from '@/lib/actions/landlord.actions';
-import { prisma } from '@/db/prisma';
-import { ScannedDocument } from '@/types/document-types';
-import DocumentManagementClient from '@/components/admin/document-management-client';
+import { Metadata } from 'next';
+import AdminDocumentsClient from './documents-client';
 
-export default async function AdminDocumentsPage() {
-  await requireAdmin();
+export const metadata: Metadata = {
+    title: 'Documents',
+};
 
-  const landlordResult = await getOrCreateCurrentLandlord();
-  if (!landlordResult.success) {
-    throw new Error(landlordResult.message || 'Unable to determine landlord');
-  }
+const AdminDocumentsPage = async () => {
+    await requireAdmin();
 
-  const documentsResult = await getDocuments();
-  const documents: ScannedDocument[] = documentsResult.success ? documentsResult.documents ?? [] : [];
+    return (
+        <main className="w-full px-4 py-8 md:px-0">
+            <div className="max-w-6xl mx-auto space-y-8">
+                <div>
+                    <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Documents</h1>
+                    <p className="text-sm text-gray-400">
+                        Manage all your documents in one place.
+                    </p>
+                </div>
+                <AdminDocumentsClient />
+            </div>
+        </main>
+    );
+};
 
-  const rawProperties = await prisma.property.findMany({
-    where: { landlordId: landlordResult.landlord.id },
-    include: {
-      units: {
-        select: {
-          id: true,
-          name: true,
-          rentAmount: true,
-        },
-      },
-    },
-  });
-
-  // Normalize Decimal fields for client components
-  const properties = rawProperties.map((property) => ({
-    ...property,
-    units: property.units.map((unit) => ({
-      ...unit,
-      rentAmount: (unit as any)?.rentAmount?.toNumber?.() ?? unit.rentAmount ?? null,
-    })),
-  }));
-
-  return (
-    <div className="w-full px-4 py-8 md:px-0 space-y-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">Document Management</h1>
-          <p className="text-slate-300">
-            Upload and digitize your paper leases, receipts, and tenant records. Our AI will automatically extract and classify information.
-          </p>
-        </div>
-
-        <DocumentManagementClient documents={documents} properties={properties} />
-      </div>
-    </div>
-  );
-}
+export default AdminDocumentsPage;
